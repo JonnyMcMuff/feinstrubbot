@@ -1,0 +1,24 @@
+version: "3"
+services:
+  database:
+    image: mariadb:10
+    ports:
+      - "3306:3306"
+    volumes:
+      - "./mariadb:/var/lib/mysql:rw"
+    environment:
+      - "MYSQL_DATABASE=FeinstrubDB"
+      - "MYSQL_USER=feinstrubUser"
+      - "MYSQL_PASSWORD=feinstrubpw"
+      - "MYSQL_ROOT_PASSWORD=feinstrub_root"
+    command: mysqld
+    labels:
+      feinstrub/db/production: "This database is used in the production environment"
+  pythonRuntime:
+    build: ./pythonBuild
+    volumes:
+      - "./pythonBuild/scripts:/python-scripts"
+    labes:
+      feinstrub/python3/production: "This will setup a virtualized python 3 environment"
+    depends_on:
+      - database
