@@ -4,10 +4,6 @@ services:
     image: mongo:latest
     ports:
       - "27017:27017"
-    environment:
-      - MONGODB_DBNAME=feinstrubMongoDB
-      - MONGODB_USERNAME=mongo
-      - MONGODB_PASSWORD=mongo
     labels:
       feinstrub/db/production: "This database is used in the production environment"
   python_runtime:
