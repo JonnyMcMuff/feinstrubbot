@@ -1,5 +1,7 @@
-def main()
+def main():
     while (True):
-        name = input("Please enter your name")
-        print("Hello " + name )
-main()
+        #iname = input("Please enter your name")
+        print("Hello ")
+
+if __name__ == '__main__':
+    main()
