@@ -1,6 +1,0 @@
-FROM python:3-onbuild
-USER root
-RUN mkdir /python-scripts
-VOLUME ["/python-scripts"]
-WORKDIR /python-scripts
-CMD [ "python", "./start.py" ]
