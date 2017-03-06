@@ -1,0 +1,14 @@
+version: "3"
+services:
+  database:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    labels:
+      feinstrub/db/production: "This database is used in the production environment"
+  python_runtime:
+    build: ./pythonBuild
+    labels:
+      feinstrub/python3/production: "This will setup a virtualized python 3 environment"
+    depends_on:
+      - database
