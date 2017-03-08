@@ -49,8 +49,33 @@ class Feinstrubbot:
 
         updater.start_polling()
 
+    def getAirQuality(self, userID, bot, update):
+        if not self.userExists(userID):
+            bot.sendMessage(chat_id=update.message.chat_id, text="You are not registrated to this service")
+        else:
+            userLocation = self.getUserLocation(userID)
+            longitude = userLocation[0]
+            latitude = userLocation[1]
+            currentSensor = self.findNextSensorValues(longitude, latitude)
+            currentDustValue = currentSensor['sensordatavalues'][0]['value']
+            resultText = "The current dust pollution at your location is: " + currentDustValue + "µg/m³"
+
+            bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+
+
+    def getUserLocation(self, userID):
+        result = self.users.find_one({"userID": userID})
+        if result:
+            return (result['longitude'], result['latitude'])
+        else:
+            print("User not found")
+
     def help(self, bot, update):
-        bot.sendMessage(chat_id=update.message.chat_id, text="List of Commands: \n -/registration")
+        if update.message.text == "How is the air quality?":
+            userID = update.message.from_user.id
+            self.getAirQuality(userID, bot, update)
+        else:
+            bot.sendMessage(chat_id=update.message.chat_id, text="List of Commands: \n -/registration")
 
     def unknown(self, bot, update):
         bot.sendMessage(chat_id=update.message.chat_id, text="Sorry, I didn't understand that command.")
