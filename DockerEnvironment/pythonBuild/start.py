@@ -5,7 +5,11 @@ from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 import logging
 
 import googlemaps
-from datetime import datetime
+
+import json
+from urllib.request import urlopen
+
+import math
 
 class Feinstrubbot:
     def __init__(self):
@@ -56,6 +60,25 @@ class Feinstrubbot:
             return True
         return False
 
+    def readAllSensorValues(self):
+        url = "https://api.luftdaten.info/static/v2/data.dust.min.json"
+        response = urlopen(url)
+        html = response.read().decode('utf-8')
+        data = json.loads(html)
+        return data
+
+    def findNextSensorValues(self, longitude, latitude):
+        data = self.readAllSensorValues()
+        minDistance = 99999999999
+        for item in data:
+            currentLongitude = float(item['location']['longitude'])
+            currentLatitude = float(item['location']['latitude'])
+            currentDistance = math.pow(currentLongitude - longitude, 2) + math.pow(currentLatitude - latitude, 2)
+            if currentDistance < minDistance:
+                minDistance = currentDistance
+                currentSensor = item
+        return currentSensor
+
     def registration(self, bot, update):
         userID = update.message.from_user.id
         if self.userExists(userID):
@@ -64,8 +87,8 @@ class Feinstrubbot:
         else:
             location = update.message.text.split(' ', 1)[-1]
             geoResult = self.gmaps.geocode(location)
-            longitude = geoResult[0]['geometry']['location']['lng']
-            latitude = geoResult[0]['geometry']['location']['lat']
+            longitude = float(geoResult[0]['geometry']['location']['lng'])
+            latitude = float(geoResult[0]['geometry']['location']['lat'])
 
             newUser = {
                 "userID" : userID,
@@ -75,7 +98,13 @@ class Feinstrubbot:
             }
             insertedID = self.users.insert_one(newUser).inserted_id
             print("new user: ", insertedID)
-            bot.sendMessage(chat_id=update.message.chat_id, text="Thank you for your registration")
+
+            currentSensor = self.findNextSensorValues(longitude, latitude)
+            currentDustValue = currentSensor['sensordatavalues'][0]['value']
+
+            resultText = "Thank you for your registration \n The current dust pollution at your location is: "  + currentDustValue + "µg/m³"
+
+            bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
 
 def main():
     feinstrubbot = Feinstrubbot()
