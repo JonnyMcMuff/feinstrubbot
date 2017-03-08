@@ -1,0 +1,10 @@
+FROM python:3.6-slim
+USER root
+WORKDIR /
+RUN mkdir /python-scripts
+WORKDIR /python-scripts
+ADD ./start.py /python-scripts
+COPY ./scripts /python-scripts
+RUN chmod -R 777 ./ && \
+    python -m pip install pymongo
+CMD [ "python", "/python-scripts/start.py" ]
