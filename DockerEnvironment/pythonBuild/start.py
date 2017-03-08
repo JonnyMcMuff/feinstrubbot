@@ -7,7 +7,7 @@ import pprint # pretty printer for the mongodb data
 from telegram.ext import Updater
 import logging
 
-from telegram.ext import MessageHandler, CommandHandler
+from telegram.ext import MessageHandler, CommandHandler, Filters
 
 
 class Feinstrubbot:
@@ -32,7 +32,19 @@ class Feinstrubbot:
         registration_handler = CommandHandler('registration', self.registration)
         dispatcher.add_handler(registration_handler)
 
+        unknown_handler = MessageHandler(Filters.command, self.unknown)
+        dispatcher.add_handler(unknown_handler)
+
+        help_handler = MessageHandler(Filters.text, self.help)
+        dispatcher.add_handler(help_handler)
+
         updater.start_polling()
+
+    def help(self, bot, update):
+        bot.sendMessage(chat_id=update.message.chat_id, text="List of Commands: \n -/registration")
+
+    def unknown(self, bot, update):
+        bot.sendMessage(chat_id=update.message.chat_id, text="Sorry, I didn't understand that command.")
 
     def userExists(self, userID):
         if self.users.find_one({"userID": userID}):
@@ -45,8 +57,10 @@ class Feinstrubbot:
             print("User already in database");
             bot.sendMessage(chat_id=update.message.chat_id, text="You are already registered to the bot")
         else:
+            location = update.message.text.split(' ')[1]
             newUser = {
-                "userID" : userID
+                "userID" : userID,
+                "location": location
             }
             insertedID = self.users.insert_one(newUser).inserted_id
             print("new user: ", insertedID)
