@@ -1,31 +1,36 @@
 #!/usr/bin/env python
 
 from pymongo import MongoClient # MongoDB Library
-import datetime # used to create a sample document with timestamp
-import pprint # pretty printer for the mongodb data
-
-from telegram.ext import Updater
+from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 import logging
 
-from telegram.ext import MessageHandler, CommandHandler, Filters
-
+import googlemaps
+from datetime import datetime
 
 class Feinstrubbot:
     def __init__(self):
         self.users = []
+        self.gmaps = []
+
+    def readGoogleToke(self):
+        fileHandle = open("google.token", "r")
+        return fileHandle.readline().strip()
+
+    def connectoToGoogle(self):
+        self.gmaps = googlemaps.Client(key=self.readGoogleToke())
 
     def connectToDB(self):
         client = MongoClient('127.0.0.1', 27017)
         db = client['test-database']
         self.users = db['users']
 
-    def readToken(self):
+    def readTelegramToken(self):
         fileHandle = open("bot.token", "r")
         return fileHandle.readline().strip()
 
     def connectToBot(self):
         print("Connecting to bot")
-        updater = Updater(token=self.readToken())
+        updater = Updater(token=self.readTelegramToken())
         dispatcher = updater.dispatcher
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -54,13 +59,19 @@ class Feinstrubbot:
     def registration(self, bot, update):
         userID = update.message.from_user.id
         if self.userExists(userID):
-            print("User already in database");
+            print("User already in database")
             bot.sendMessage(chat_id=update.message.chat_id, text="You are already registered to the bot")
         else:
-            location = update.message.text.split(' ')[1]
+            location = update.message.text.split(' ', 1)[-1]
+            geoResult = self.gmaps.geocode(location)
+            longitude = geoResult[0]['geometry']['location']['lng']
+            latitude = geoResult[0]['geometry']['location']['lat']
+
             newUser = {
                 "userID" : userID,
-                "location": location
+                "location": location,
+                "longitude": longitude,
+                "latitude": latitude
             }
             insertedID = self.users.insert_one(newUser).inserted_id
             print("new user: ", insertedID)
@@ -68,6 +79,7 @@ class Feinstrubbot:
 
 def main():
     feinstrubbot = Feinstrubbot()
+    feinstrubbot.connectoToGoogle()
     feinstrubbot.connectToDB()
     feinstrubbot.connectToBot()
 
