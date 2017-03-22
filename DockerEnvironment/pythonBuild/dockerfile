@@ -11,5 +11,7 @@ RUN chmod -R 777 ./ && \
     python -m pip install googlemaps && \
     python -m pip install python-telegram-bot && \
     python -m pip install urlopen && \
-    python -m pip install terminaltables
+    python -m pip install terminaltables && \
+    python -m pip install apscheduler && \
+    python -m pip install beautifulsoup4
 CMD [ "python", "/python-scripts/start.py" ]
