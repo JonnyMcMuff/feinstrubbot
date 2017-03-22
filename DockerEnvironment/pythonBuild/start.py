@@ -10,6 +10,7 @@ import json
 from urllib.request import urlopen
 
 import math
+import datetime
 
 class Feinstrubbot:
     def __init__(self):
@@ -93,9 +94,11 @@ class Feinstrubbot:
 
     def updateLocation(self, userID, location, longitude, latitude):
         update = {
+            "userID": userID,
             "location": location,
             "longitude": longitude,
-            "latitude": latitude
+            "latitude": latitude,
+            "lastAction": datetime.datetime.utcnow()
         }
         user = {
             "userID": userID
@@ -108,15 +111,18 @@ class Feinstrubbot:
         if not geoResult:
             bot.sendMessage(chat_id=update.message.chat_id, text="Can't find location")
         else:
-            longitude = float(geoResult[0]['geometry']['location']['lng'])
-            latitude = float(geoResult[0]['geometry']['location']['lat'])
-            self.updateLocation(userID, location, longitude, latitude)
-            currentSensor = self.findNextSensorValues(longitude, latitude)
-            currentDustValue = currentSensor['sensordatavalues'][0]['value']
+            if self.userExists(userID):
+                longitude = float(geoResult[0]['geometry']['location']['lng'])
+                latitude = float(geoResult[0]['geometry']['location']['lat'])
+                self.updateLocation(userID, location, longitude, latitude)
+                currentSensor = self.findNextSensorValues(longitude, latitude)
+                currentDustValue = currentSensor['sensordatavalues'][0]['value']
 
-            resultText = "Thank you for your location update \n The current dust pollution at your location is: " + currentDustValue + "µg/m³"
+                resultText = "Thank you for your location update \n The current dust pollution at your location is: " + currentDustValue + "µg/m³"
 
-            bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+                bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+            else:
+                bot.sendMessage(chat_id=update.message.chat_id, text="Sorry you are not registered. Please register first.")
 
     def userExists(self, userID):
         if self.users.find_one({"userID": userID}):
@@ -160,6 +166,7 @@ class Feinstrubbot:
 
     def registration(self, bot, update):
         userID = update.message.from_user.id
+
         if self.userExists(userID):
             print("User already in database")
             bot.sendMessage(chat_id=update.message.chat_id, text="You are already registered to the bot")
@@ -173,7 +180,8 @@ class Feinstrubbot:
                 "userID" : userID,
                 "location": location,
                 "longitude": longitude,
-                "latitude": latitude
+                "latitude": latitude,
+                "lastAction": datetime.datetime.utcnow()
             }
             insertedID = self.users.insert_one(newUser).inserted_id
             print("new user: ", insertedID)
