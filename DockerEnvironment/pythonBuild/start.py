@@ -39,7 +39,7 @@ class Feinstrubbot:
         dispatcher = updater.dispatcher
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-        registration_handler = CommandHandler('registration', self.registration)
+        registration_handler = CommandHandler('register', self.registration)
         dispatcher.add_handler(registration_handler)
 
         unregister_handler = CommandHandler('unregister', self.unregister)
@@ -85,16 +85,18 @@ class Feinstrubbot:
             else:
                 location = split[1]
                 userID = update.message.from_user.id
-                self.setNewLocation(userID, location, bot, update)
+                userName = update.message.from_user.first_name
+                self.setNewLocation(userID, userName, location, bot, update)
         else:
             bot.sendMessage(chat_id=update.message.chat_id, text="List of Commands: \n -/registration")
 
     def unknown(self, bot, update):
         bot.sendMessage(chat_id=update.message.chat_id, text="Sorry, I didn't understand that command.")
 
-    def updateLocation(self, userID, location, longitude, latitude):
+    def updateLocation(self, userID, userName, location, longitude, latitude):
         update = {
             "userID": userID,
+            "userName": userName,
             "location": location,
             "longitude": longitude,
             "latitude": latitude,
@@ -106,7 +108,7 @@ class Feinstrubbot:
 
         self.users.update(user, update)
 
-    def setNewLocation(self, userID, location, bot, update):
+    def setNewLocation(self, userID, userName, location, bot, update):
         geoResult = self.gmaps.geocode(location)
         if not geoResult:
             bot.sendMessage(chat_id=update.message.chat_id, text="Can't find location")
@@ -114,7 +116,7 @@ class Feinstrubbot:
             if self.userExists(userID):
                 longitude = float(geoResult[0]['geometry']['location']['lng'])
                 latitude = float(geoResult[0]['geometry']['location']['lat'])
-                self.updateLocation(userID, location, longitude, latitude)
+                self.updateLocation(userID, userName, location, longitude, latitude)
                 currentSensor = self.findNextSensorValues(longitude, latitude)
                 currentDustValue = currentSensor['sensordatavalues'][0]['value']
 
@@ -166,6 +168,7 @@ class Feinstrubbot:
 
     def registration(self, bot, update):
         userID = update.message.from_user.id
+        userName = update.message.from_user.first_name
 
         if self.userExists(userID):
             print("User already in database")
@@ -178,6 +181,7 @@ class Feinstrubbot:
 
             newUser = {
                 "userID" : userID,
+                "userName": userName,
                 "location": location,
                 "longitude": longitude,
                 "latitude": latitude,
