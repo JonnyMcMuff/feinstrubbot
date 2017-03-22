@@ -57,9 +57,9 @@ class Feinstrubbot:
 
         text_handler = MessageHandler(Filters.text, self.text)
         dispatcher.add_handler(text_handler)
-		
-		alarm_handler = MassageHandler(Filters.text, self.text)
-		dispatcher.add_handler(alarm_handler)
+
+        alarm_handler = MessageHandler(Filters.text, self.alarm)
+        dispatcher.add_handler(alarm_handler)
 
         updater.start_polling()
 
@@ -213,12 +213,12 @@ class Feinstrubbot:
             resultText = "Thank you for your registration \n The current dust pollution at your location is: "  + currentDustValue + "µg/m³"
 
             bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
-	def check4FeinstaubAlarm(self)
+	def check4FeinstaubAlarm(self):
 		url = "http://www.stuttgart.de/feinstaubalarm/"
 		soup = BeautifulSoup(urlopen(url),"html.parser")
 		data = soup.h1.string
 		print(soup.h1.string)
-		if data.find(kein) != (-1):
+		if data.find("kein") != (-1):
 			print("Feinstaubalarm")
 			if self.alarm == 0:
 				bot.sendMessage(chat_id=update.message.chat_id, text="It is Feinstaubalarm in Stuttgart")
