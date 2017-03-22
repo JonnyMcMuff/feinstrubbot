@@ -41,6 +41,9 @@ class Feinstrubbot:
         registration_handler = CommandHandler('registration', self.registration)
         dispatcher.add_handler(registration_handler)
 
+        unregister_handler = CommandHandler('unregister', self.unregister)
+        dispatcher.add_handler(unregister_handler)
+
         unknown_handler = MessageHandler(Filters.command, self.unknown)
         dispatcher.add_handler(unknown_handler)
 
@@ -120,6 +123,12 @@ class Feinstrubbot:
             return True
         return False
 
+    def deleteUser(self, userID):
+        result = self.users.delete_many({"userID": userID})
+        if result.deleted_count == 1:
+            return True
+        return False
+
     def readAllSensorValues(self):
         url = "https://api.luftdaten.info/static/v2/data.dust.min.json"
         response = urlopen(url)
@@ -138,6 +147,16 @@ class Feinstrubbot:
                 minDistance = currentDistance
                 currentSensor = item
         return currentSensor
+
+    def unregister(self, bot, update):
+        userID = update.message.from_user.id
+        if self.userExists(userID):
+            if self.deleteUser(userID):
+                bot.sendMessage(chat_id=update.message.chat_id, text="You are now unregistered")
+            else:
+                bot.sendMessage(chat_id=update.message.chat_id, text="Failed to unregister you from service")
+        else:
+            bot.sendMessage(chat_id=update.message.chat_id, text="You are not registered")
 
     def registration(self, bot, update):
         userID = update.message.from_user.id
