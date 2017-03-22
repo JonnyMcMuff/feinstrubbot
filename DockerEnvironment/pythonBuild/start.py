@@ -24,7 +24,7 @@ class Feinstrubbot:
         self.gmaps = googlemaps.Client(key=self.readGoogleToke())
 
     def connectToDB(self):
-        client = MongoClient('127.0.0.1', 27017)
+        client = MongoClient('database', 27017)
         db = client['test-database']
         self.users = db['users']
 
