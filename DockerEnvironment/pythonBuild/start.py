@@ -10,6 +10,7 @@ import json
 from urllib.request import urlopen
 
 import math
+import datetime
 
 class Feinstrubbot:
     def __init__(self):
@@ -38,14 +39,17 @@ class Feinstrubbot:
         dispatcher = updater.dispatcher
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-        registration_handler = CommandHandler('registration', self.registration)
+        registration_handler = CommandHandler('register', self.registration)
         dispatcher.add_handler(registration_handler)
+
+        unregister_handler = CommandHandler('unregister', self.unregister)
+        dispatcher.add_handler(unregister_handler)
 
         unknown_handler = MessageHandler(Filters.command, self.unknown)
         dispatcher.add_handler(unknown_handler)
 
-        help_handler = MessageHandler(Filters.text, self.help)
-        dispatcher.add_handler(help_handler)
+        text_handler = MessageHandler(Filters.text, self.text)
+        dispatcher.add_handler(text_handler)
 
         updater.start_polling()
 
@@ -70,18 +74,66 @@ class Feinstrubbot:
         else:
             print("User not found")
 
-    def help(self, bot, update):
+    def text(self, bot, update):
         if update.message.text == "How is the air quality?":
             userID = update.message.from_user.id
             self.getAirQuality(userID, bot, update)
+        elif update.message.text.startswith("My current location is"):
+            split = location = update.message.text.split("My current location is ")
+            if len(split) != 2:
+                bot.sendMessage(chat_id=update.message.chat_id, text="Can't get location")
+            else:
+                location = split[1]
+                userID = update.message.from_user.id
+                userName = update.message.from_user.first_name
+                self.setNewLocation(userID, userName, location, bot, update)
         else:
             bot.sendMessage(chat_id=update.message.chat_id, text="List of Commands: \n -/registration")
 
     def unknown(self, bot, update):
         bot.sendMessage(chat_id=update.message.chat_id, text="Sorry, I didn't understand that command.")
 
+    def updateLocation(self, userID, userName, location, longitude, latitude):
+        update = {
+            "userID": userID,
+            "userName": userName,
+            "location": location,
+            "longitude": longitude,
+            "latitude": latitude,
+            "lastAction": datetime.datetime.utcnow()
+        }
+        user = {
+            "userID": userID
+        }
+
+        self.users.update(user, update)
+
+    def setNewLocation(self, userID, userName, location, bot, update):
+        geoResult = self.gmaps.geocode(location)
+        if not geoResult:
+            bot.sendMessage(chat_id=update.message.chat_id, text="Can't find location")
+        else:
+            if self.userExists(userID):
+                longitude = float(geoResult[0]['geometry']['location']['lng'])
+                latitude = float(geoResult[0]['geometry']['location']['lat'])
+                self.updateLocation(userID, userName, location, longitude, latitude)
+                currentSensor = self.findNextSensorValues(longitude, latitude)
+                currentDustValue = currentSensor['sensordatavalues'][0]['value']
+
+                resultText = "Thank you for your location update \n The current dust pollution at your location is: " + currentDustValue + "µg/m³"
+
+                bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+            else:
+                bot.sendMessage(chat_id=update.message.chat_id, text="Sorry you are not registered. Please register first.")
+
     def userExists(self, userID):
         if self.users.find_one({"userID": userID}):
+            return True
+        return False
+
+    def deleteUser(self, userID):
+        result = self.users.delete_many({"userID": userID})
+        if result.deleted_count == 1:
             return True
         return False
 
@@ -104,8 +156,20 @@ class Feinstrubbot:
                 currentSensor = item
         return currentSensor
 
+    def unregister(self, bot, update):
+        userID = update.message.from_user.id
+        if self.userExists(userID):
+            if self.deleteUser(userID):
+                bot.sendMessage(chat_id=update.message.chat_id, text="You are now unregistered")
+            else:
+                bot.sendMessage(chat_id=update.message.chat_id, text="Failed to unregister you from service")
+        else:
+            bot.sendMessage(chat_id=update.message.chat_id, text="You are not registered")
+
     def registration(self, bot, update):
         userID = update.message.from_user.id
+        userName = update.message.from_user.first_name
+
         if self.userExists(userID):
             print("User already in database")
             bot.sendMessage(chat_id=update.message.chat_id, text="You are already registered to the bot")
@@ -117,9 +181,11 @@ class Feinstrubbot:
 
             newUser = {
                 "userID" : userID,
+                "userName": userName,
                 "location": location,
                 "longitude": longitude,
-                "latitude": latitude
+                "latitude": latitude,
+                "lastAction": datetime.datetime.utcnow()
             }
             insertedID = self.users.insert_one(newUser).inserted_id
             print("new user: ", insertedID)

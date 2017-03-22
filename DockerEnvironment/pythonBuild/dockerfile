@@ -4,10 +4,12 @@ WORKDIR /
 RUN mkdir /python-scripts
 WORKDIR /python-scripts
 ADD ./start.py /python-scripts
+ADD ./admin.py /python-scripts
 COPY ./scripts /python-scripts
 RUN chmod -R 777 ./ && \
     python -m pip install pymongo && \
     python -m pip install googlemaps && \
     python -m pip install python-telegram-bot && \
-    python -m pip install urlopen
+    python -m pip install urlopen && \
+    python -m pip install terminaltables
 CMD [ "python", "/python-scripts/start.py" ]
