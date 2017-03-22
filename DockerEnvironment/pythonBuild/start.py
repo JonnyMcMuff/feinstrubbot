@@ -24,7 +24,7 @@ class Feinstrubbot:
         self.gmaps = googlemaps.Client(key=self.readGoogleToke())
 
     def connectToDB(self):
-        client = MongoClient('database', 27017)
+        client = MongoClient('127.0.0.1', 27017)
         db = client['test-database']
         self.users = db['users']
 
@@ -44,8 +44,8 @@ class Feinstrubbot:
         unknown_handler = MessageHandler(Filters.command, self.unknown)
         dispatcher.add_handler(unknown_handler)
 
-        help_handler = MessageHandler(Filters.text, self.help)
-        dispatcher.add_handler(help_handler)
+        text_handler = MessageHandler(Filters.text, self.text)
+        dispatcher.add_handler(text_handler)
 
         updater.start_polling()
 
@@ -70,15 +70,50 @@ class Feinstrubbot:
         else:
             print("User not found")
 
-    def help(self, bot, update):
+    def text(self, bot, update):
         if update.message.text == "How is the air quality?":
             userID = update.message.from_user.id
             self.getAirQuality(userID, bot, update)
+        elif update.message.text.startswith("My current location is"):
+            split = location = update.message.text.split("My current location is ")
+            if len(split) != 2:
+                bot.sendMessage(chat_id=update.message.chat_id, text="Can't get location")
+            else:
+                location = split[1]
+                userID = update.message.from_user.id
+                self.setNewLocation(userID, location, bot, update)
         else:
             bot.sendMessage(chat_id=update.message.chat_id, text="List of Commands: \n -/registration")
 
     def unknown(self, bot, update):
         bot.sendMessage(chat_id=update.message.chat_id, text="Sorry, I didn't understand that command.")
+
+    def updateLocation(self, userID, location, longitude, latitude):
+        update = {
+            "location": location,
+            "longitude": longitude,
+            "latitude": latitude
+        }
+        user = {
+            "userID": userID
+        }
+
+        self.users.update(user, update)
+
+    def setNewLocation(self, userID, location, bot, update):
+        geoResult = self.gmaps.geocode(location)
+        if not geoResult:
+            bot.sendMessage(chat_id=update.message.chat_id, text="Can't find location")
+        else:
+            longitude = float(geoResult[0]['geometry']['location']['lng'])
+            latitude = float(geoResult[0]['geometry']['location']['lat'])
+            self.updateLocation(userID, location, longitude, latitude)
+            currentSensor = self.findNextSensorValues(longitude, latitude)
+            currentDustValue = currentSensor['sensordatavalues'][0]['value']
+
+            resultText = "Thank you for your location update \n The current dust pollution at your location is: " + currentDustValue + "µg/m³"
+
+            bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
 
     def userExists(self, userID):
         if self.users.find_one({"userID": userID}):
