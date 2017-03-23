@@ -2,6 +2,7 @@
 
 from pymongo import MongoClient # MongoDB Library
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
+from telegram import Bot
 import logging
 
 import googlemaps
@@ -20,6 +21,7 @@ class Feinstrubbot:
     def __init__(self):
         self.users = []
         self.gmaps = []
+        self.bot = []
         scheduler = BackgroundScheduler()
         scheduler.add_job(self.check4FeinstaubAlarm, 'interval', minutes=1)
         scheduler.start()
@@ -42,7 +44,10 @@ class Feinstrubbot:
 
     def connectToBot(self):
         print("Connecting to bot")
-        updater = Updater(token=self.readTelegramToken())
+        telegramToken = token=self.readTelegramToken()
+        updater = Updater(token=telegramToken)
+        self.bot = Bot(token=telegramToken)
+
         dispatcher = updater.dispatcher
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -207,7 +212,8 @@ class Feinstrubbot:
                 "location": location,
                 "longitude": longitude,
                 "latitude": latitude,
-                "lastAction": datetime.datetime.utcnow()
+                "lastAction": datetime.datetime.utcnow(),
+                "chat_id": update.message.chat_id
             }
             insertedID = self.users.insert_one(newUser).inserted_id
             print("new user: ", insertedID)
@@ -227,11 +233,14 @@ class Feinstrubbot:
         if data.find("kein") != (-1):
             print("Feinstaubalarm")
             if self.alarm == 0:
-                bot.sendMessage(chat_id=update.message.chat_id, text="It is Feinstaubalarm in Stuttgart")
-                bot.sendMessage(chat_id=update.message.chat_id, text="The VVS tickets are cheaper now!")
+                for user in self.users.find({}):
+                    self.bot.sendMessage(chat_id=user['chat_id'], text="It is Feinstaubalarm in Stuttgart")
+                    self.bot.sendMessage(chat_id=user['chat_id'], text="The VVS tickets are cheaper now!")
             self.alarm = 1
         else:
             print("Currently no Feinstaubalarm in Stuttgart")
+            for user in self.users.find({}):
+                self.bot.sendMessage(chat_id=user['chat_id'], text="It is NO Feinstaubalarm in Stuttgart")
             self.alarm = 0
         return self.alarm
 
