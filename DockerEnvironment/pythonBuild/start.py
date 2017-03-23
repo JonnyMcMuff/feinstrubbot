@@ -16,13 +16,13 @@ from bs4 import BeautifulSoup
 from apscheduler.schedulers.background import BackgroundScheduler
 
 class Feinstrubbot:
-	alarm = 0
+    alarm = 0
     def __init__(self):
         self.users = []
         self.gmaps = []
-		scheduler = BackgroundScheduler()
-		scheduler.add_job(self.check4FeinstaubAlarm, 'interval', minutes=1)
-		scheduler.start()
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(self.check4FeinstaubAlarm, 'interval', minutes=1)
+        scheduler.start()
 
     def readGoogleToke(self):
         fileHandle = open("google.token", "r")
@@ -58,18 +58,18 @@ class Feinstrubbot:
         text_handler = MessageHandler(Filters.text, self.text)
         dispatcher.add_handler(text_handler)
 
-        alarm_handler = MessageHandler(Filters.text, self.alarm)
-        dispatcher.add_handler(alarm_handler)
+        #alarm_handler = MessageHandler(Filters.text, self.alarmstatus)
+        #dispatcher.add_handler(alarm_handler)
 
         updater.start_polling()
 
-	def alarmstatus(self, bot, update):
-		if update.message.text == "What is the alarm status?":
-			if self.check4FeinstaubAlarm() == 1:
-				bot.sendMessage(chat_id=update.message.chat_id, text="It is Feinstaubalarm in Stuttgart")
-			else:
-				bot.sendMessage(chat_id=update.message.chat_id, text="It is no Feinstaubalarm in Stuttgart")
-	
+    def alarmstatus(self, bot, update):
+        if update.message.text == "What is the alarm status?":
+            if self.check4FeinstaubAlarm() == 1:
+                bot.sendMessage(chat_id=update.message.chat_id, text="It is Feinstaubalarm in Stuttgart")
+            else:
+                bot.sendMessage(chat_id=update.message.chat_id, text="It is no Feinstaubalarm in Stuttgart")
+
     def getAirQuality(self, userID, bot, update):
         if not self.userExists(userID):
             bot.sendMessage(chat_id=update.message.chat_id, text="You are not registrated to this service")
@@ -104,6 +104,11 @@ class Feinstrubbot:
                 userID = update.message.from_user.id
                 userName = update.message.from_user.first_name
                 self.setNewLocation(userID, userName, location, bot, update)
+        elif update.message.text == "What is the alarm status?":
+            if self.check4FeinstaubAlarm() == 1:
+                bot.sendMessage(chat_id=update.message.chat_id, text="It is Feinstaubalarm in Stuttgart")
+            else:
+                bot.sendMessage(chat_id=update.message.chat_id, text="It is no Feinstaubalarm in Stuttgart")
         else:
             bot.sendMessage(chat_id=update.message.chat_id, text="List of Commands: \n -/registration")
 
@@ -213,22 +218,23 @@ class Feinstrubbot:
             resultText = "Thank you for your registration \n The current dust pollution at your location is: "  + currentDustValue + "µg/m³"
 
             bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
-	def check4FeinstaubAlarm(self):
-		url = "http://www.stuttgart.de/feinstaubalarm/"
-		soup = BeautifulSoup(urlopen(url),"html.parser")
-		data = soup.h1.string
-		print(soup.h1.string)
-		if data.find("kein") != (-1):
-			print("Feinstaubalarm")
-			if self.alarm == 0:
-				bot.sendMessage(chat_id=update.message.chat_id, text="It is Feinstaubalarm in Stuttgart")
-				bot.sendMessage(chat_id=update.message.chat_id, text="The VVS tickets are cheaper now!")
-			self.alarm = 1
-		else:
-			print("Currently no Feinstaubalarm in Stuttgart")
-			self.alarm = 0
-		return self.alarm
-		
+
+    def check4FeinstaubAlarm(self):
+        url = "http://www.stuttgart.de/feinstaubalarm/"
+        soup = BeautifulSoup(urlopen(url),"html.parser")
+        data = soup.h1.string
+        print(soup.h1.string)
+        if data.find("kein") != (-1):
+            print("Feinstaubalarm")
+            if self.alarm == 0:
+                bot.sendMessage(chat_id=update.message.chat_id, text="It is Feinstaubalarm in Stuttgart")
+                bot.sendMessage(chat_id=update.message.chat_id, text="The VVS tickets are cheaper now!")
+            self.alarm = 1
+        else:
+            print("Currently no Feinstaubalarm in Stuttgart")
+            self.alarm = 0
+        return self.alarm
+
 def main():
     feinstrubbot = Feinstrubbot()
     feinstrubbot.connectoToGoogle()
