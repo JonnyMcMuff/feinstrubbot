@@ -39,7 +39,7 @@ class Feinstrubbot:
         print("Connected to GMaps", self.gmaps)
 
     def connectToDB(self):
-        client = MongoClient('localhost', 27017)
+        client = MongoClient('database', 27017)
         db = client['feinstaub']
         self.users = db['users']
         print("Connected to DB", self.users)
