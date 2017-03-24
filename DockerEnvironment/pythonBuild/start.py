@@ -399,7 +399,7 @@ class Feinstrubbot:
         currentSensor = self.findNextSensorValues(longitude, latitude)
         currentDustValue = currentSensor['sensordatavalues'][0]['value']
 
-        resultText = "Hi" + userName + "! Thank you for your registration \n The current dust pollution at your location is: " + currentDustValue + "µg/m³"
+        resultText = "Hi " + userName + "! Thank you for your registration \n The current dust pollution at your location is: " + currentDustValue + "µg/m³"
 
         bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
 
