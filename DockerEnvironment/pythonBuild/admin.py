@@ -14,14 +14,14 @@ class adminTerminal():
 
     def connectToDB(self):
         client = MongoClient('database', 27017)
-        db = client['test-database']
+        db = client['feinstaub']
         self.users = db['users']
 
     def printAllUsers(self):
         tableData = []
-        tableData.append(["id", "name", "location", "last active"])
+        tableData.append(["id", "name", "locations", "last active"])
         for user in self.users.find({}):
-            tableData.append([user['userID'],user['userName'],user['location'],user['lastAction']])
+            tableData.append([user['userID'],user['userName'],user['locations'],user['lastAction']])
 
         table = AsciiTable(tableData)
         print(table.table)
