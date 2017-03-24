@@ -167,7 +167,7 @@ class Feinstrubbot:
             bot.sendMessage(chat_id=update.message.chat_id,
                             text="How is the air quality? - Returns air-quality from default location")
             bot.sendMessage(chat_id=update.message.chat_id,
-                            text="What are my active locations? - Returns your locations")
+                            text="What are my locations stats? - Returns your locations")
 
     #
     # Helper Functions
