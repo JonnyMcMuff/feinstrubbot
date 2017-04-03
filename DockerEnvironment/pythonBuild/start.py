@@ -19,11 +19,11 @@ from time import gmtime, strftime
 class Feinstrubbot:
     alarm = 0
 
-    def __init__(self):
-        self.users = []
-        self.bot = []
-        self.gmaps = []
-        scheduler = BackgroundScheduler()
+    def __init__(self, users=[], bot = [], gmaps=[], scheduler = BackgroundScheduler()):
+        self.users = users
+        self.bot = bot
+        self.gmaps = gmaps
+        self.scheduler = scheduler
         scheduler.add_job(self.check4FeinstaubAlarm, 'interval', minutes=1)
         scheduler.start()
 
