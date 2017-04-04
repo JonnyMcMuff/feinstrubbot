@@ -1,11 +1,18 @@
 from behave import *
-from mock import Mock, MagicMock
 from DockerEnvironment.pythonBuild.start import Feinstrubbot
+from mock import *
+
+class AnyStringWith(str):
+    def __eq__(self, other):
+        return self in other
 
 def prepare():
     # prepare all the stuff
     bot = Mock
+    bot.sendMessage = MagicMock()
+    scheduler = Mock()
     users = Mock
+    users.update = MagicMock(return_value=True)
     users.find_one = MagicMock(return_value={
             "userID": 1234,
             "userName": 'TestUser',
@@ -41,8 +48,10 @@ def prepare():
  {'long_name': '70178', 'types': ['postal_code'], 'short_name': '70178'}],
  'formatted_address': 'Rotebühlpl. 41/1, 70178 Stuttgart, Germany'}])
     # Create the Feinstrubbot
-    return Feinstrubbot(users=users, bot=bot, gmaps=gmaps)
+    return Feinstrubbot(users=users, bot=bot, gmaps=gmaps, scheduler=scheduler)
 
+def side_effect_find_next_sensor_values():
+    return {'location': {'id': 563, 'latitude': '48.772', 'longitude': '9.169'}, 'sensor': {'id': 1148, 'sensor_type': {'name': 'SDS011', 'manufacturer': 'Nova Fitness', 'id': 14}}, 'timestamp': '2017-04-04 22:29:27', 'id': 66409523, 'sensordatavalues': [{'value_type': 'P1', 'id': 184095361, 'value': '11.16'}, {'value_type': 'P2', 'id': 184095362, 'value': '9.55'}]}
 
 @given('that the user is registered to the service')
 def step_impl(context):
@@ -53,26 +62,28 @@ def step_impl(context):
 def step_impl(context):
     bot = context.feinstaub.bot
     update = Mock()
-    update.message = {
-        "userid": 1234,
-        "text": 'My current location is Rotebühlplatz 41, Stuttgart',
-        "chatid": 2233
-    }
+    update.message.from_user.id = 1234
+    update.message.text = "My current location is Rotebuehlplatz 41, Stuttgart"
     context.feinstaub.text(bot, update)
-
-
 
 @then('data is updated in the backend')
 def step_impl(context):
-    return context.feinstaub.bot.sendMessage.assert_called()
+    return context.feinstaub.users.update.assert_called_once()
 
 @when('the user has send a proper location update string')
+#@patch('DockerEnvironment.pythonBuild.start.findNextSensorValues', side_effect=side_effect_find_next_sensor_values)
 def step_impl(context):
-    pass
+    bot = context.feinstaub.bot
+    update = Mock()
+    update.message.from_user.id = 1234
+    update.message.text = "My current location is Rotebuehlplatz 41, Stuttgart"
+    update.message.chat_id = 155
+    context.feinstaub.findNextSensorValues = MagicMock(return_value={'location': {'id': 563, 'latitude': '48.772', 'longitude': '9.169'}, 'sensor': {'id': 1148, 'sensor_type': {'name': 'SDS011', 'manufacturer': 'Nova Fitness', 'id': 14}}, 'timestamp': '2017-04-04 22:29:27', 'id': 66409523, 'sensordatavalues': [{'value_type': 'P1', 'id': 184095361, 'value': '11.16'}, {'value_type': 'P2', 'id': 184095362, 'value': '9.55'}]})
+    context.feinstaub.text(bot, update)
 
 @then('the user gets a confirmation about the location change')
 def step_impl(context):
-    pass
+    return context.feinstaub.bot.sendMessage.assert_called_with(chat_id=155, text=AnyStringWith("Rotebuehlplatz"))
 
 @when('the user has send a bad location update string')
 def step_impl(context):

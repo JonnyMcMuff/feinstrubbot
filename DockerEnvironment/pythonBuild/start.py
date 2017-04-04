@@ -19,7 +19,7 @@ from time import gmtime, strftime
 class Feinstrubbot:
     alarm = 0
 
-    def __init__(self, users=[], bot = [], gmaps=[], scheduler = BackgroundScheduler()):
+    def __init__(self, users=[], bot=[], gmaps=[], scheduler=BackgroundScheduler()):
         self.users = users
         self.bot = bot
         self.gmaps = gmaps
