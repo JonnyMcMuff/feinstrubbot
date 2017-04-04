@@ -1,7 +1,6 @@
 from behave import *
 from mock import Mock, MagicMock
-from ...start import Feinstrubbot
-
+from DockerEnvironment.pythonBuild.start import Feinstrubbot
 
 def prepare():
     # prepare all the stuff
