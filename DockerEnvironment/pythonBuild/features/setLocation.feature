@@ -1,6 +1,6 @@
 Feature: SetLocation
   Scenario: BackendUpdate
-    Given that the user is registered to the service
+    Given that the user is registered to the service set location
     When the user sends "My current location is xxxx"
     Then the data is updated in the backend
   Scenario: GetConfirmation
