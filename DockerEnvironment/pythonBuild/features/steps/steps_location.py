@@ -85,10 +85,18 @@ def step_impl(context):
 def step_impl(context):
     return context.feinstaub.bot.sendMessage.assert_called_with(chat_id=155, text=AnyStringWith("Rotebuehlplatz"))
 
+
 @when('the user has send a bad location update string')
 def step_impl(context):
-    pass
+    bot = context.feinstaub.bot
+    context.feinstaub.gmaps.geocode = MagicMock(return_value=False)
+    update = Mock()
+    update.message.text = "My current location is invalid"
+    update.message.chat_id = 125
+    update.message.from_user.id = 1123
+
+    context.feinstaub.text(bot, update)
 
 @then('the user gets a error message')
 def step_impl(context):
-    pass
+    return context.feinstaub.bot.sendMessage.assert_called_with(chat_id=125,text="Can't find location")
