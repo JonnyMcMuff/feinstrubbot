@@ -366,42 +366,45 @@ class Feinstrubbot:
 
     def registration(self, bot, update):
         userID = update.message.from_user.id
-        userName = update.message.from_user.first_name
-        location = update.message.text.split(' ', 1)[-1]
-        geoResult = self.gmaps.geocode(location)
-        longitude = float(geoResult[0]['geometry']['location']['lng'])
-        latitude = float(geoResult[0]['geometry']['location']['lat'])
+        if self.userExists(userID):
+            bot.sendMessage(chat_id=update.message.chat_id, text="User already registrated")
+        else:
+            userName = update.message.from_user.first_name
+            location = update.message.text.split(' ', 1)[-1]
+            geoResult = self.gmaps.geocode(location)
+            longitude = float(geoResult[0]['geometry']['location']['lng'])
+            latitude = float(geoResult[0]['geometry']['location']['lat'])
 
-        print(userID, userName, longitude, latitude)
-        newUser = {
-            "userID": userID,
-            "userName": userName,
-            "locations": [
-                {
-                    "name": location,
-                    "longitude": longitude,
-                    "latitude": latitude
-                }
-            ],
-            "quietHours": [
-                {
-                    "start": "22:00",
-                    "end": "06:00"
-                }
-            ],
-            "alarmInterval": 5,  # Timeinterval in minutes
-            "lastAction": datetime.datetime.utcnow(),
-            "chat_id": update.message.chat_id
-        }
-        insertedID = self.users.insert_one(newUser).inserted_id
-        print("new user: ", insertedID)
+            print(userID, userName, longitude, latitude)
+            newUser = {
+                "userID": userID,
+                "userName": userName,
+                "locations": [
+                    {
+                        "name": location,
+                        "longitude": longitude,
+                        "latitude": latitude
+                    }
+                ],
+                "quietHours": [
+                    {
+                        "start": "22:00",
+                        "end": "06:00"
+                    }
+                ],
+                "alarmInterval": 5,  # Timeinterval in minutes
+                "lastAction": datetime.datetime.utcnow(),
+                "chat_id": update.message.chat_id
+            }
+            insertedID = self.users.insert_one(newUser).inserted_id
+            print("new user: ", insertedID)
 
-        currentSensor = self.findNextSensorValues(longitude, latitude)
-        currentDustValue = currentSensor['sensordatavalues'][0]['value']
+            currentSensor = self.findNextSensorValues(longitude, latitude)
+            currentDustValue = currentSensor['sensordatavalues'][0]['value']
 
-        resultText = "Hi " + userName + "! Thank you for your registration \n The current dust pollution at your location is: " + currentDustValue + "µg/m³"
+            resultText = "Hi " + userName + "! Thank you for your registration \n The current dust pollution at your location is: " + currentDustValue + "µg/m³"
 
-        bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+            bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
 
     def updateUser(self, userID, newName):
         user = self.users.find_one({"userID": userID})
