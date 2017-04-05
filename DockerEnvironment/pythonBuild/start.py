@@ -19,11 +19,12 @@ from time import gmtime, strftime
 class Feinstrubbot:
     alarm = 0
 
-    def __init__(self, users=[], bot=[], gmaps=[], scheduler=BackgroundScheduler()):
+    def __init__(self, users=[], bot=[], gmaps=[], scheduler=BackgroundScheduler(), client=MongoClient('database', 27017) ):
         self.users = users
         self.bot = bot
         self.gmaps = gmaps
         self.scheduler = scheduler
+        self.client = client
         scheduler.add_job(self.check4FeinstaubAlarm, 'interval', minutes=1)
         scheduler.start()
 
@@ -39,8 +40,8 @@ class Feinstrubbot:
         print("Connected to GMaps", self.gmaps)
 
     def connectToDB(self):
-        client = MongoClient('database', 27017)
-        db = client['feinstaub']
+        #client = MongoClient('database', 27017)
+        db = self.client.get('feinstaub')
         self.users = db['users']
         print("Connected to DB", self.users)
 
