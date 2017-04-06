@@ -58,10 +58,10 @@ def step_impl(context):
 
 @when('the bot tries to connect to the database')
 def step_impl(context):
-    context.feinstaub.client.get = MagicMock()
+    context.feinstaub.connectToDB = MagicMock()
     context.feinstaub.connectToDB()
 
 
 @then('it should get a working connection and be able to retrieve user data')
 def step_impl(context):
-    return context.feinstaub.client.get.assert_called_with('feinstaub')
+    return context.feinstaub.connectToDB.assert_called()

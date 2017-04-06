@@ -5,11 +5,14 @@ from start import Feinstrubbot
 class AnyStringWith(str):
   def __eq__(self, other):
     return self in other
-  def prepare():
-  # prepare all the stuff
+
+def prepare():
+    # prepare all the stuff
     bot = Mock
     bot.sendMessage = MagicMock()
     scheduler = Mock()
+    returnValue = MagicMock()
+    returnValue.inserted_id = 1234
     users = Mock
     users.insert_one = MagicMock(return_value=returnValue)
     gmaps = Mock()
@@ -78,4 +81,5 @@ def step_impl(context):
 
 @then('The group should get information about Feinstaub Alarm')
 def step_impl(context):
-    return context.feinstaub.bot.sendMessage.assert_called_with(chat_id=2233,text=AnyStringWith("Feinstaubalarm"))
+    # if tickets are cheaper ==> Feinstaubalarm
+    return context.feinstaub.bot.sendMessage.assert_called_with(chat_id=2233,text=AnyStringWith("The VVS tickets are cheaper now!"))

@@ -67,6 +67,4 @@ def step_impl(context):
 @then('s/he can query the registered users and delete all that have not been active over a defined period (e.g. 2 years) of time. When the user is deleted the user will be notified.')
 def step_impl(context):
     context.adminTerminal.users.get = MagicMock()
-    #testargs = ["0", "2017-01-02"]
-    #with patch.object(sys, 'argv', testargs):
     context.adminTerminal.removeUsers()
