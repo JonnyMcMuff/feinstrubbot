@@ -81,5 +81,5 @@ def step_impl(context):
 
 @then('The group should get information about Feinstaub Alarm')
 def step_impl(context):
-    # if tickets are cheaper ==> Feinstaubalarm
+    # if tickets are cheaper ==> Feinstaubalar
     return context.feinstaub.bot.sendMessage.assert_called_with(chat_id=2233,text=AnyStringWith("The VVS tickets are cheaper now!"))
