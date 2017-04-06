@@ -1,6 +1,7 @@
 from behave import *
-from start import Feinstrubbot
+from admin import adminTerminal
 from mock import *
+import sys
 
 class AnyStringWith(str):
     def __eq__(self, other):
@@ -48,20 +49,24 @@ def prepare():
  {'long_name': 'Germany', 'types': ['country', 'political'], 'short_name': 'DE'},
  {'long_name': '70178', 'types': ['postal_code'], 'short_name': '70178'}],
  'formatted_address': 'Rotebühlpl. 41/1, 70178 Stuttgart, Germany'}])
-    # Create the Feinstrubbot
-    return Feinstrubbot(users=users, bot=bot, gmaps=gmaps, scheduler=scheduler, client=client)
+    date = Mock()
+    # Create the adminTerminal
+    return adminTerminal()
 
-@given('that there is a working setup of an external database')
+@given('that there is a valid administrator')
 def step_impl(context):
-    context.feinstaub = prepare()
+    context.adminTerminal = prepare()
+    context.adminTerminal.userExists = MagicMock(return_value=True)
 
 
-@when('the bot tries to connect to the database')
+@when('the administrator has access to the database')
 def step_impl(context):
-    context.feinstaub.client.get = MagicMock()
-    context.feinstaub.connectToDB()
+    context.adminTerminal.connectToDB()
 
 
-@then('it should get a working connection and be able to retrieve user data')
+@then('s/he can query the registered users and delete all that have not been active over a defined period (e.g. 2 years) of time. When the user is deleted the user will be notified.')
 def step_impl(context):
-    return context.feinstaub.client.get.assert_called_with('feinstaub')
+    context.adminTerminal.users.get = MagicMock()
+    #testargs = ["0", "2017-01-02"]
+    #with patch.object(sys, 'argv', testargs):
+    context.adminTerminal.removeUsers()

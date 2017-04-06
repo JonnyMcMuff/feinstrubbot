@@ -1,5 +1,5 @@
 from behave import *
-from DockerEnvironment.pythonBuild.start import Feinstrubbot
+from start import Feinstrubbot
 from mock import *
 
 class AnyStringWith(str):

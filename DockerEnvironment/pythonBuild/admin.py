@@ -6,7 +6,7 @@ import sys
 from terminaltables import AsciiTable
 import datetime
 
-class adminTerminal():
+class adminTerminal:
 
     def __init__(self):
         self.users = []

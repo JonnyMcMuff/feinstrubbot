@@ -1,10 +1,13 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from pymongo import MongoClient  # MongoDB Library
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 from telegram import Bot
 from bs4 import BeautifulSoup
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
+import ssl
 
 import googlemaps
 
@@ -474,8 +477,11 @@ class Feinstrubbot:
         return self.alarm
 
     def getAlarmStatus(self):
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
         url = "http://www.stuttgart.de/feinstaubalarm/"
-        soup = BeautifulSoup(urlopen(url), "html.parser")
+        soup = BeautifulSoup(urlopen(url, context=ctx), "html.parser")
         data = soup.h1.string
         if data.find("kein") != (-1):
             self.alarm = 1
@@ -488,8 +494,11 @@ class Feinstrubbot:
     # DataAPI
     #
     def readAllSensorValues(self):
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
         url = "https://api.luftdaten.info/static/v2/data.dust.min.json"
-        response = urlopen(url)
+        response = urlopen(url, context=ctx)
         html = response.read().decode('utf-8')
         data = json.loads(html)
         return data
