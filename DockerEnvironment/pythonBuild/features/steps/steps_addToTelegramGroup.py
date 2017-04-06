@@ -73,7 +73,7 @@ def step_impl(context):
     }
     u = []
     u.append(user)
-    users.find = MagicMock(return_value=u)
+    context.feinstaub.users.find = MagicMock(return_value=u)
     context.feinstaub.check4FeinstaubAlarm()
 
 @then('The group should get information about Feinstaub Alarm')
