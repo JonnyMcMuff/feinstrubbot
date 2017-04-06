@@ -46,7 +46,7 @@ class AnyStringWith(str):
                                              'formatted_address': 'Rotebühlpl. 41/1, 70178 Stuttgart, Germany'}])
     return Feinstrubbot(users=users, bot=bot, gmaps=gmaps, scheduler=scheduler)
 
-@given('that the user is registered to the service')
+@given('that the user is registered to the service (add to Group)')
 def step_impl(context):
     context.feinstaub = prepare()
     context.feinstaub.userExists = MagicMock(return_value=True)
@@ -73,7 +73,7 @@ def step_impl(context):
     }
     u = []
     u.append(user)
-    users.find = MagicMock(return_value=u)
+    context.feinstaub.users.find = MagicMock(return_value=u)
     context.feinstaub.check4FeinstaubAlarm()
 
 @then('The group should get information about Feinstaub Alarm')
