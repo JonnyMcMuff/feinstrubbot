@@ -58,7 +58,7 @@ def step_impl(context):
     bot = context.feinstaub.bot
     groupRegistrationMessage = Mock()
     groupRegistrationMessage.message.from_user.id = 4321
-	  groupRegistrationMassage.message.chat_id = 2233
+	groupRegistrationMassage.message.chat_id = 2233
     groupRegistrationMessage.message.from_user.first_name = "TestGroup"
     groupRegistrationMessage.message.text = "/registration 70178 Stuttgart"
     context.feinstaub.registration(bot, groupRegistrationMessage)
