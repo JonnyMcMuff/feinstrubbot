@@ -41,7 +41,7 @@ class Feinstrubbot:
 
     def connectToDB(self):
         #client = MongoClient('database', 27017)
-        db = self.client.get('feinstaub')
+        db = self.client.feinstaub
         self.users = db['users']
         print("Connected to DB", self.users)
 
