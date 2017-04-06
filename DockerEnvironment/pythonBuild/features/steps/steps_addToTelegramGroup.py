@@ -1,6 +1,6 @@
 from behave import *
 from mock import *
-from DockerEnvironment.pythonBuild.start import Feinstrubbot
+from start import Feinstrubbot
 
 class AnyStringWith(str):
   def __eq__(self, other):
