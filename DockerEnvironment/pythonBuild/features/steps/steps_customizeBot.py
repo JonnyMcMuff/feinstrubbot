@@ -49,36 +49,36 @@ def prepare():
                                              'formatted_address': 'Rotebühlpl. 41/1, 70178 Stuttgart, Germany'}])
     return Feinstrubbot(users=users, bot=bot, gmaps=gmaps, scheduler=scheduler)
 
-@given('that the user is registered to the service')
+@given('that the user is registered to the service4')
 def step_impl(context):
     context.feinstaub = prepare()
     context.feinstaub.userExists = MagicMock(return_value=True)
 
-@when('the the user text to the bot "Please notify my every 20 min"')
+@when('the user text to the bot "Please notify my every x min"')
 def step_impl(context):
     bot = context.feinstaub.bot
     username = Mock()
     username.message.from_user.id = 1420
     username.message.chat_id = 420
     username.message.from_user.first_name = "TestUser"
-    username.message.text = "Please notify my every 20 min"
+    username.message.text = "Please notify my every 5 min"
     context.feinstaub.text(bot, username)
 
 @then('the user is notified about the his saved customisation.')
 def step_impl(context):
     return context.feinstaub.bot.sendMessage.assert_called_with(chat_id=420,
-                                                                text=AnyStringWith("Now I'm gonna keep you every 20 min uptodate!"))
+                                                                text=AnyStringWith("Now I'm gonna keep you every"))
 
 
 
 #-------------------------------------------------------------------------------------------------
 
-@given('that the user is registered to the service')
+@given('that the user is registered to the service2')
 def step_impl(context):
     context.feinstaub = prepare()
     context.feinstaub.userExists = MagicMock(return_value=True)
 
-@when('the the user text to the bot "Set quiet hours from $start$ to $end$"')
+@when('the user text to the bot "Set quiet hours from $start$ to $end$"')
 def step_impl(context):
     bot = context.feinstaub.bot
     username = Mock()
@@ -96,12 +96,12 @@ def step_impl(context):
 #-------------------------------------------------------------------------------------------------
 
 
-@given('that the user is registered to the service')
+@given('that the user is registered to the service3')
 def step_impl(context):
     context.feinstaub = prepare()
     context.feinstaub.userExists = MagicMock(return_value=True)
 
-@when('the the user text to the bot "Please call me NewUsername"')
+@when('the user text to the bot "Please call me NewUsername"')
 def step_impl(context):
     bot = context.feinstaub.bot
     username = Mock()
