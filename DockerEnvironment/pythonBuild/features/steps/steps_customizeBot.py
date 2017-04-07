@@ -49,7 +49,7 @@ def prepare():
                                              'formatted_address': 'Rotebühlpl. 41/1, 70178 Stuttgart, Germany'}])
     return Feinstrubbot(users=users, bot=bot, gmaps=gmaps, scheduler=scheduler)
 
-@given('that the user is registered to the service')
+@given('that the user is registered to the service (customize)')
 def step_impl(context):
     context.feinstaub = prepare()
     context.feinstaub.userExists = MagicMock(return_value=True)
@@ -73,7 +73,7 @@ def step_impl(context):
 
 #-------------------------------------------------------------------------------------------------
 
-@given('that the user is registered to the service')
+@given('that the user is registered to the service (customize1)')
 def step_impl(context):
     context.feinstaub = prepare()
     context.feinstaub.userExists = MagicMock(return_value=True)
@@ -96,7 +96,7 @@ def step_impl(context):
 #-------------------------------------------------------------------------------------------------
 
 
-@given('that the user is registered to the service')
+@given('that the user is registered to the service (customize2)')
 def step_impl(context):
     context.feinstaub = prepare()
     context.feinstaub.userExists = MagicMock(return_value=True)
