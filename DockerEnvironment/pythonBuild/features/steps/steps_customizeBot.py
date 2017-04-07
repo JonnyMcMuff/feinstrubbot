@@ -54,31 +54,32 @@ def step_impl(context):
     context.feinstaub = prepare()
     context.feinstaub.userExists = MagicMock(return_value=True)
 
-@when('the the user text to the bot "Please notify my every 20 min"')
+@when('the the user text to the bot "Set quiet hours from $start$ to $end$"')
 def step_impl(context):
     bot = context.feinstaub.bot
     username = Mock()
     username.message.from_user.id = 1420
     username.message.chat_id = 420
     username.message.from_user.first_name = "TestUser"
-    username.message.text = "Please notify my every 20 min"
+    username.message.text = "Please notify my every 5 min"
     context.feinstaub.text(bot, username)
 
 @then('the user is notified about the his saved customisation.')
 def step_impl(context):
     return context.feinstaub.bot.sendMessage.assert_called_with(chat_id=420,
-                                                                text=AnyStringWith("Now I'm gonna keep you every 20 min uptodate!"))
+                                                                text=AnyStringWith("Now I'm gonna keep you every"))
 
 
 
 #-------------------------------------------------------------------------------------------------
+
 
 @given('that the user is registered to the service (customize1)')
 def step_impl(context):
     context.feinstaub = prepare()
     context.feinstaub.userExists = MagicMock(return_value=True)
 
-@when('the the user text to the bot "Set quiet hours from $start$ to $end$"')
+@when('the user text to the bot "Set quiet hours from $start$ to $end$"')
 def step_impl(context):
     bot = context.feinstaub.bot
     username = Mock()
@@ -94,8 +95,6 @@ def step_impl(context):
                                                                 text=AnyStringWith("Okay TestUser! Now I keep calm between 20:00 and 22:00!"))
 
 #-------------------------------------------------------------------------------------------------
-
-
 @given('that the user is registered to the service (customize2)')
 def step_impl(context):
     context.feinstaub = prepare()
