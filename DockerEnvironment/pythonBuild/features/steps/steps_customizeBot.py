@@ -92,7 +92,7 @@ def step_impl(context):
 @then('the user is notified about the his new quiet hours.')
 def step_impl(context):
     return context.feinstaub.bot.sendMessage.assert_called_with(chat_id=420,
-                                                                text=AnyStringWith("Okay TestUser! Now I keep calm between 20:00 and 22:00!"))
+                                                                text=AnyStringWith("TestUser please provide a valid time interval. Like '5 min' or '2 hours'. Please keep in mind, that we also the number 1 (1 hour ~ every hour)"))
 
 #-------------------------------------------------------------------------------------------------
 @given('that the user is registered to the service (customize2)')
