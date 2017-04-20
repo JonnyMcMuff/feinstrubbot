@@ -11,5 +11,5 @@ class FeinstrubDbManager:
 
         db = self.mongo_client.feinstaub
         users = db['users']
-        print("Connected to DB", self.users)
+        print("Connected to DB")
         return users
