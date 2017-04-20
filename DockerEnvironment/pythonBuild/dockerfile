@@ -6,7 +6,7 @@ WORKDIR /python-scripts
 ADD ./start.py /python-scripts
 ADD ./admin.py /python-scripts
 COPY ./scripts /python-scripts
-COPY ./feinstrubbot /python-scripts
+COPY ./feinstrubbot /python-scripts/feinstrubbot
 RUN chmod -R 777 ./ && \
     python -m pip install pymongo && \
     python -m pip install googlemaps && \
