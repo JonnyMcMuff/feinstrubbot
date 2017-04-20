@@ -1,6 +1,7 @@
 from behave import *
 from mock import *
 from start import Feinstrubbot
+#from feinstrubbot.feinstrubdbpy import  FeinstrubDbManager
 
 class AnyStringWith(str):
     def __eq__(self, other):
@@ -53,6 +54,7 @@ def prepare():
 def step_impl(context):
     context.feinstaub = prepare()
     context.feinstaub.userExists = MagicMock(return_value=True)
+
 
 @when('the the user text to the bot "Set quiet hours from $start$ to $end$"')
 def step_impl(context):

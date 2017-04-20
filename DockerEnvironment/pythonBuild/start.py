@@ -28,12 +28,16 @@ from time import gmtime, strftime
 class Feinstrubbot:
     alarm = 0
 
-    def __init__(self, users=[], bot=[], gmaps=[], scheduler=BackgroundScheduler(), client=MongoClient('database', 27017) ):
+    def __init__(self, users=None, bot=[], gmaps=[], scheduler=BackgroundScheduler(), client=MongoClient('database', 27017) ):
         self.users = users
         self.bot = bot
         self.gmaps = gmaps
         self.scheduler = scheduler
         self.client = client
+        if self.users is None:
+            self.db_manager = FeinstrubDbManager(self.client)
+        else:
+            self.db_manager = FeinstrubDbManager(self.client,users=self.users)
         scheduler.add_job(self.check4FeinstaubAlarm, 'interval', minutes=1)
         scheduler.start()
 
@@ -52,8 +56,7 @@ class Feinstrubbot:
 
     def connectToDB(self):
         # Register a feinstrubdbmanager
-        manager = FeinstrubDbManager(self.client)
-        self.users = manager.get_user_db_connection()
+        self.users = self.db_manager.get_user_db_connection()
 
     def readTelegramToken(self):
         self.telegram_token_manager = TelegramAccessManager()
