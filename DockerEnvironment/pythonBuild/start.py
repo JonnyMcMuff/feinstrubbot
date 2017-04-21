@@ -8,6 +8,12 @@ from bs4 import BeautifulSoup
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 import ssl
+from feinstrubbot.feinstrubdb import FeinstrubDbManager
+from feinstrubbot.telegram_access_manager import TelegramAccessManager
+from feinstrubbot.google_access_manager import GoogleTokenAccessManager
+from feinstrubbot.googleMapsAccessManager import GoogleMapManager
+from feinstrubbot.feinstrub_helper import FeinstrubHelper
+
 
 import googlemaps
 
@@ -22,12 +28,16 @@ from time import gmtime, strftime
 class Feinstrubbot:
     alarm = 0
 
-    def __init__(self, users=[], bot=[], gmaps=[], scheduler=BackgroundScheduler(), client=MongoClient('database', 27017) ):
+    def __init__(self, users=None, bot=[], gmaps=[], scheduler=BackgroundScheduler(), client=MongoClient('database', 27017) ):
         self.users = users
         self.bot = bot
         self.gmaps = gmaps
         self.scheduler = scheduler
         self.client = client
+        if self.users is None:
+            self.db_manager = FeinstrubDbManager(self.client)
+        else:
+            self.db_manager = FeinstrubDbManager(self.client,users=self.users)
         scheduler.add_job(self.check4FeinstaubAlarm, 'interval', minutes=1)
         scheduler.start()
 
@@ -35,22 +45,22 @@ class Feinstrubbot:
     # Initialisation
     #
     def readGoogleToke(self):
-        fileHandle = open("google.token", "r")
-        return fileHandle.readline().strip()
+        self.googleTokenManager = GoogleTokenAccessManager()
+        return self.googleTokenManager.get_token()
+
 
     def connectoToGoogle(self):
-        self.gmaps = googlemaps.Client(key=self.readGoogleToke())
+        google_map_manager = GoogleMapManager()
+        self.gmaps = google_map_manager.get_map_client(self.readGoogleToke())
         print("Connected to GMaps", self.gmaps)
 
     def connectToDB(self):
-        #client = MongoClient('database', 27017)
-        db = self.client.feinstaub
-        self.users = db['users']
-        print("Connected to DB", self.users)
+        # Register a feinstrubdbmanager
+        self.users = self.db_manager.get_user_db_connection()
 
     def readTelegramToken(self):
-        fileHandle = open("bot.token", "r")
-        return fileHandle.readline().strip()
+        self.telegram_token_manager = TelegramAccessManager()
+        return self.telegram_token_manager.get_token()
 
     def connectToBot(self):
         print("Connecting to bot")
@@ -177,11 +187,8 @@ class Feinstrubbot:
     # Helper Functions
     #
     def isfloat(value):
-        try:
-            float(value)
-            return True
-        except:
-            return False
+        helper = FeinstrubHelper()
+        return helper.is_Float(value)
 
     def unknown(self, bot, update):
         bot.sendMessage(chat_id=update.message.chat_id, text="Sorry, I didn't understand that command.")
