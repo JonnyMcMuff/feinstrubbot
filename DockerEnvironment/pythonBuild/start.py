@@ -13,6 +13,7 @@ from feinstrubbot.telegram_access_manager import TelegramAccessManager
 from feinstrubbot.google_access_manager import GoogleTokenAccessManager
 from feinstrubbot.googleMapsAccessManager import GoogleMapManager
 from feinstrubbot.feinstrub_helper import FeinstrubHelper
+from Iterator.HandlerIterator import myIterator
 
 
 import googlemaps
@@ -71,17 +72,29 @@ class Feinstrubbot:
         dispatcher = updater.dispatcher
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-        registration_handler = CommandHandler('register', self.registration)
-        dispatcher.add_handler(registration_handler)
+        # Implement Iterator pattern for HandlerIteration
+        handler_list = []
+        handler_list.append(CommandHandler('register', self.registration))
 
-        unregister_handler = CommandHandler('unregister', self.unregister)
-        dispatcher.add_handler(unregister_handler)
+        #registration_handler = CommandHandler('register', self.registration)
+        #dispatcher.add_handler(registration_handler)
 
-        unknown_handler = MessageHandler(Filters.command, self.unknown)
-        dispatcher.add_handler(unknown_handler)
+        handler_list.append(CommandHandler('unregister', self.unregister))
+        #unregister_handler = CommandHandler('unregister', self.unregister)
+        #dispatcher.add_handler(unregister_handler)
 
-        text_handler = MessageHandler(Filters.text, self.text)
-        dispatcher.add_handler(text_handler)
+        handler_list.append( MessageHandler(Filters.command, self.unknown))
+        #unknown_handler = MessageHandler(Filters.command, self.unknown)
+        #dispatcher.add_handler(unknown_handler)
+
+        handler_list.append(MessageHandler(Filters.text, self.text))
+        #text_handler = MessageHandler(Filters.text, self.text)
+        #dispatcher.add_handler(text_handler)
+
+        # Now iterate through the list and add to the dispatcher
+        iterator = myIterator(handler_list)
+        for handler in iterator:
+            dispatcher.add_handler(handler)
 
         updater.start_polling()
 
