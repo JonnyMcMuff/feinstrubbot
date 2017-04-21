@@ -8,6 +8,8 @@ from bs4 import BeautifulSoup
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 import ssl
+
+from feinstrubbot.CreateUserCommand import CreateUserCommand
 from feinstrubbot.feinstrubdb import FeinstrubDbManager
 from feinstrubbot.telegram_access_manager import TelegramAccessManager
 from feinstrubbot.google_access_manager import GoogleTokenAccessManager
@@ -28,7 +30,7 @@ from time import gmtime, strftime
 class Feinstrubbot:
     alarm = 0
 
-    def __init__(self, users=None, bot=[], gmaps=[], scheduler=BackgroundScheduler(), client=MongoClient('database', 27017) ):
+    def __init__(self, users=None, bot=[], gmaps=[], scheduler=BackgroundScheduler(), client=MongoClient('127.0.0.1', 27017) ):
         self.users = users
         self.bot = bot
         self.gmaps = gmaps
@@ -386,7 +388,10 @@ class Feinstrubbot:
             longitude = float(geoResult[0]['geometry']['location']['lng'])
             latitude = float(geoResult[0]['geometry']['location']['lat'])
 
+            createCommand = CreateUserCommand(self.users, userID, userName, location, longitude, latitude, update.message.chat_id)
+
             print(userID, userName, longitude, latitude)
+            '''
             newUser = {
                 "userID": userID,
                 "userName": userName,
@@ -408,7 +413,10 @@ class Feinstrubbot:
                 "chat_id": update.message.chat_id
             }
             insertedID = self.users.insert_one(newUser).inserted_id
-            print("new user: ", insertedID)
+            '''
+            createCommand.execute()
+
+            #print("new user: ", insertedID)
 
             currentSensor = self.findNextSensorValues(longitude, latitude)
             currentDustValue = currentSensor['sensordatavalues'][0]['value']
