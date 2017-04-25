@@ -90,14 +90,14 @@ class Feinstrubbot:
         user = self.users.find_one({"userID": userID})
         userName = user["userName"]
         if update.message.text == "How is the air quality?":
-            self.getAirQuality(userID, userName, bot, update)
+            self.dataChain(self, userID, userName, bot, update)
         elif update.message.text.startswith("How is the air quality in"):
             split = location = update.message.text.split("How is the air quality in ")
             if len(split) != 2:
                 bot.sendMessage(chat_id=update.message.chat_id, text="Can't get location")
             else:
                 location = split[1]
-                self.getAirQualityFrom(userID, userName, location, bot, update)
+                self.dataChain(self, userID, userName, location, bot, update)
         elif update.message.text.startswith("My current location is"):
             split = update.message.text.split("My current location is ")
             if len(split) != 2:
@@ -205,7 +205,7 @@ class Feinstrubbot:
                 longitude = float(geoResult[0]['geometry']['location']['lng'])
                 latitude = float(geoResult[0]['geometry']['location']['lat'])
                 self.updateLocation(userID, userName, location, longitude, latitude)
-                currentSensor = self.findNextSensorValues(longitude, latitude)
+                currentSensor = self.dataChain(self, longitude, latitude)
                 currentDustValue = currentSensor['sensordatavalues'][0]['value']
                 resultText = "Thank you for your location update, " + userName + " \n The current dust pollution at your new location (" + location + ") is: " + currentDustValue + "µg/m³"
 
@@ -223,7 +223,7 @@ class Feinstrubbot:
                 longitude = float(geoResult[0]['geometry']['location']['lng'])
                 latitude = float(geoResult[0]['geometry']['location']['lat'])
                 self.insertLocation(userID, location, longitude, latitude)
-                currentSensor = self.findNextSensorValues(longitude, latitude)
+                currentSensor = self.dataChain(self, longitude, latitude)
                 currentDustValue = currentSensor['sensordatavalues'][0]['value']
                 resultText = "Thank you for your location update, " + userName + " \n The current dust pollution at " + location + " is: " + currentDustValue + "µg/m³"
 
@@ -285,7 +285,7 @@ class Feinstrubbot:
         index = 0
         for location in user["locations"]:
             index += 1
-            currentSensor = self.findNextSensorValues(location["longitude"], location["latitude"])
+            currentSensor = self.dataChain(self, location["longitude"], location["latitude"])
             currentDustValue = currentSensor['sensordatavalues'][0]['value']
             bot.sendMessage(chat_id=update.message.chat_id,
                             text=str(index) + ". " + location["name"] + " = " + currentDustValue + " µg/m³")
@@ -410,7 +410,7 @@ class Feinstrubbot:
             insertedID = self.users.insert_one(newUser).inserted_id
             print("new user: ", insertedID)
 
-            currentSensor = self.findNextSensorValues(longitude, latitude)
+            currentSensor = self.dataChain(self, longitude, latitude)
             currentDustValue = currentSensor['sensordatavalues'][0]['value']
 
             resultText = "Hi " + userName + "! Thank you for your registration \n The current dust pollution at your location is: " + currentDustValue + "µg/m³"
@@ -500,6 +500,7 @@ class Feinstrubbot:
     #
     # DataAPI
     #
+
     def readAllSensorValues(self):
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
@@ -511,7 +512,8 @@ class Feinstrubbot:
         return data
 
     def findNextSensorValues(self, longitude, latitude):
-        data = self.readAllSensorValues()
+        data = self.dataChain(self)
+        print(data)
         minDistance = 99999999999
         for item in data:
             currentLongitude = float(item['location']['longitude'])
@@ -529,7 +531,7 @@ class Feinstrubbot:
             userLocation = self.getUserLocation(userID)
             longitude = userLocation[0]
             latitude = userLocation[1]
-            currentSensor = self.findNextSensorValues(longitude, latitude)
+            currentSensor = self.dataChain(self, longitude, latitude)
             currentDustValue = currentSensor['sensordatavalues'][0]['value']
             resultText = "The current dust pollution at your location is: " + currentDustValue + "µg/m³"
 
@@ -542,11 +544,32 @@ class Feinstrubbot:
             userLocation = self.getUserLocationFrom(userID, location)
             longitude = userLocation[0]
             latitude = userLocation[1]
-            currentSensor = self.findNextSensorValues(longitude, latitude)
+            currentSensor = self.dataChain(self, longitude, latitude)
             currentDustValue = currentSensor['sensordatavalues'][0]['value']
             resultText = "The current dust pollution in " + location + " is: " + currentDustValue + "µg/m³"
 
             bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+
+    def dataChain(self, *args):
+        print (args)
+        if len(args) == 1:
+            print("readAllSensorValues")
+            print(args[0])
+            self.readAllSensorValues()
+        elif len(args) == 3:
+            print("findNextSensorValues")
+            print(args[1],args[2])
+            self.findNextSensorValues(args[1],args[2])
+        elif len(args) == 5:
+            print("getAirQuality")
+            print(args[1],args[2],args[3],args[4])
+            self.getAirQuality(args[1],args[2],args[3],args[4])
+        elif len(args) == 6:
+            print("getAirQualityFrom")
+            print(args[1],args[2],args[3],args[4],args[5])
+            self.getAirQualityFrom(args[1],args[2],args[3],args[4],args[5])
+        else:
+            print("Error while parsing chain arguments")
 
             #
             # Merge
