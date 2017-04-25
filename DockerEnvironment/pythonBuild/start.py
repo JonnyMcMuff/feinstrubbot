@@ -512,8 +512,8 @@ class Feinstrubbot:
         return data
 
     def findNextSensorValues(self, longitude, latitude):
-        data = self.dataChain(self)
-        print(data)
+        data = self.dataChain(longitude, latitude)
+        print("DATA",data)
         minDistance = 99999999999
         for item in data:
             currentLongitude = float(item['location']['longitude'])
@@ -554,22 +554,27 @@ class Feinstrubbot:
         print (args)
         if len(args) == 1:
             print("readAllSensorValues")
-            print(args[0])
-            self.readAllSensorValues()
+            data = self.readAllSensorValues()
+            return data
         elif len(args) == 3:
             print("findNextSensorValues")
             print(args[1],args[2])
-            self.findNextSensorValues(args[1],args[2])
+            nextSensor = self.findNextSensorValues(args[1],args[2])
+            print(nextSensor)
+            return nextSensor
         elif len(args) == 5:
             print("getAirQuality")
             print(args[1],args[2],args[3],args[4])
             self.getAirQuality(args[1],args[2],args[3],args[4])
+            return 5
         elif len(args) == 6:
             print("getAirQualityFrom")
             print(args[1],args[2],args[3],args[4],args[5])
             self.getAirQualityFrom(args[1],args[2],args[3],args[4],args[5])
+            return 6
         else:
             print("Error while parsing chain arguments")
+            return -1
 
             #
             # Merge
