@@ -13,7 +13,7 @@ from feinstrubbot.telegram_access_manager import TelegramAccessManager
 from feinstrubbot.google_access_manager import GoogleTokenAccessManager
 from feinstrubbot.googleMapsAccessManager import GoogleMapManager
 from feinstrubbot.feinstrub_helper import FeinstrubHelper
-
+from Observer import Publisher
 
 import googlemaps
 
@@ -23,7 +23,6 @@ from urllib.request import urlopen
 import math
 import datetime
 from time import gmtime, strftime
-
 
 class Feinstrubbot:
     alarm = 0
@@ -40,6 +39,7 @@ class Feinstrubbot:
             self.db_manager = FeinstrubDbManager(self.client,users=self.users)
         scheduler.add_job(self.check4FeinstaubAlarm, 'interval', minutes=1)
         scheduler.start()
+        self.tBot = Publisher()
 
     #
     # Initialisation
@@ -409,6 +409,7 @@ class Feinstrubbot:
             }
             insertedID = self.users.insert_one(newUser).inserted_id
             print("new user: ", insertedID)
+            self.tBot.register(newUser)
 
             currentSensor = self.findNextSensorValues(longitude, latitude)
             currentDustValue = currentSensor['sensordatavalues'][0]['value']
@@ -442,7 +443,7 @@ class Feinstrubbot:
         if self.getAlarmStatus():
             print("Feinstaubalarm")
             if self.alarm == 0:
-                for user in self.users.find({}):
+                for user in self.tBot.subscribers:
                     quiteHours = user["quietHours"]
                     currHour = strftime("%H")
                     currMin = strftime("%M")
@@ -463,23 +464,6 @@ class Feinstrubbot:
             self.alarm = 1
         else:
             print("Currently no Feinstaubalarm in Stuttgart")
-            for user in self.users.find({}):
-                quiteHours = user["quietHours"]
-                currHour = strftime("%H")
-                currMin = strftime("%M")
-                covered = False
-                for hour in quiteHours:
-                    startTime = hour["start"].split(":")
-                    endTime = hour["end"].split(":")
-                    start = datetime.time(int(startTime[0]), int(startTime[1]), 0)
-                    end = datetime.time(int(endTime[0]), int(endTime[1]), 0)
-                    now = datetime.time(int(currHour), int(currMin), 0)
-                    nowMin = int(currHour) * 60 + int(currMin)
-                    if not self.time_in_range(start, end, now):
-                        if (nowMin % user["alarmInterval"]) == 0:
-                            self.bot.sendMessage(chat_id=user['chat_id'],
-                                                 text=user["userName"] + ", it is NO Feinstaubalarm in Stuttgart")
-
             self.alarm = 0
         return self.alarm
 
@@ -491,11 +475,11 @@ class Feinstrubbot:
         soup = BeautifulSoup(urlopen(url, context=ctx), "html.parser")
         data = soup.h1.string
         if data.find("kein") != (-1):
-            self.alarm = 1
-            return True
-        else:
             self.alarm = 0
             return False
+        else:
+            self.alarm = 1
+            return True
 
     #
     # DataAPI
