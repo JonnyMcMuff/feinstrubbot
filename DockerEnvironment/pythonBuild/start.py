@@ -8,12 +8,6 @@ from bs4 import BeautifulSoup
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 import ssl
-from feinstrubbot.feinstrubdb import FeinstrubDbManager
-from feinstrubbot.telegram_access_manager import TelegramAccessManager
-from feinstrubbot.google_access_manager import GoogleTokenAccessManager
-from feinstrubbot.googleMapsAccessManager import GoogleMapManager
-from feinstrubbot.feinstrub_helper import FeinstrubHelper
-
 
 import googlemaps
 
@@ -25,42 +19,56 @@ import datetime
 from time import gmtime, strftime
 
 
-class Feinstrubbot:
-    alarm = 0
+class Mediator:
 
-    def __init__(self, users=None, bot=[], gmaps=[], scheduler=BackgroundScheduler(), client=MongoClient('database', 27017) ):
+    def reactorToResponder(self, message, chat_id):
+        self._responder.sendAnswerToClient(self.bot, message,chat_id)
+
+
+    def __init__(self, users=[], bot=[], gmaps=[]):
         self.users = users
         self.bot = bot
         self.gmaps = gmaps
-        self.scheduler = scheduler
-        self.client = client
-        if self.users is None:
-            self.db_manager = FeinstrubDbManager(self.client)
-        else:
-            self.db_manager = FeinstrubDbManager(self.client,users=self.users)
-        scheduler.add_job(self.check4FeinstaubAlarm, 'interval', minutes=1)
-        scheduler.start()
+        self._responder = AntwortSender(self);
+        self._reactor = Feinstrubbot(self, users);
+
+        self._reactor.readGoogleToke()
+        self._reactor.connectoToGoogle()
+        self._reactor.connectToDB()
+        self._reactor.readTelegramToken()
+        self._reactor.connectToBot()
+
+
+class AntwortSender:
+    def __init__(self, mediator):
+        self._mediator = mediator
+
+    def sendAnswerToClient(self, bot, message, chat_id):
+        bot.sendMessage(chat_id=chat_id, text=message)
+
+class Feinstrubbot:
+    alarm = 0
 
     #
     # Initialisation
     #
     def readGoogleToke(self):
-        self.googleTokenManager = GoogleTokenAccessManager()
-        return self.googleTokenManager.get_token()
-
+        fileHandle = open("google.token", "r")
+        return fileHandle.readline().strip()
 
     def connectoToGoogle(self):
-        google_map_manager = GoogleMapManager()
-        self.gmaps = google_map_manager.get_map_client(self.readGoogleToke())
+        self.gmaps = googlemaps.Client(key=self.readGoogleToke())
         print("Connected to GMaps", self.gmaps)
 
     def connectToDB(self):
-        # Register a feinstrubdbmanager
-        self.users = self.db_manager.get_user_db_connection()
+        #client = MongoClient('database', 27017)
+        db = self.client.feinstaub
+        self.users = db['users']
+        print("Connected to DB", self.users)
 
     def readTelegramToken(self):
-        self.telegram_token_manager = TelegramAccessManager()
-        return self.telegram_token_manager.get_token()
+        fileHandle = open("bot.token", "r")
+        return fileHandle.readline().strip()
 
     def connectToBot(self):
         print("Connecting to bot")
@@ -89,19 +97,22 @@ class Feinstrubbot:
         userID = update.message.from_user.id
         user = self.users.find_one({"userID": userID})
         userName = user["userName"]
+        text = "No answer"
         if update.message.text == "How is the air quality?":
             self.getAirQuality(userID, userName, bot, update)
         elif update.message.text.startswith("How is the air quality in"):
             split = location = update.message.text.split("How is the air quality in ")
             if len(split) != 2:
-                bot.sendMessage(chat_id=update.message.chat_id, text="Can't get location")
+                text="Can't get location"
+                self._mediator.reactorToResponder(text, update.message.chat_id)
             else:
                 location = split[1]
                 self.getAirQualityFrom(userID, userName, location, bot, update)
         elif update.message.text.startswith("My current location is"):
             split = update.message.text.split("My current location is ")
             if len(split) != 2:
-                bot.sendMessage(chat_id=update.message.chat_id, text=userName + ", I can't get this location")
+                text=userName + ", I can't get this location"
+                self._mediator.reactorToResponder(text, update.message.chat_id)
             else:
                 location = split[1]
                 self.setNewLocation(userID, userName, location, bot, update)
@@ -112,29 +123,32 @@ class Feinstrubbot:
         elif update.message.text.startswith("Add to my locations:"):
             split = location = update.message.text.split("Add to my locations: ")
             if len(split) != 2:
-                bot.sendMessage(chat_id=update.message.chat_id, text=userName + ", I can't get this location")
+                text=userName + ", I can't get this location"
+                self._mediator.reactorToResponder(text, update.message.chat_id)
             else:
                 location = split[1]
                 self.addNewLocation(userID, userName, location, bot, update)
         elif update.message.text.startswith("Remove from my locations:"):
             split = location = update.message.text.split("Remove from my locations: ")
             if len(split) != 2:
-                bot.sendMessage(chat_id=update.message.chat_id, text="" + userName + ", I can't get this location")
+                text = userName + ", I can't get this location"
+                self._mediator.reactorToResponder(text, update.message.chat_id)
             else:
                 location = split[1]
                 self.removeLocation(userID, location, bot, update)
         elif update.message.text.startswith("Please call me"):
             split = location = update.message.text.split("Please call me ")
             if len(split) != 2:
-                bot.sendMessage(chat_id=update.message.chat_id, text="Sorry, I don't know how to call you!")
+                text="Sorry, I don't know how to call you!"
+                self._mediator.reactorToResponder(text, update.message.chat_id)
             else:
                 name = split[1]
                 self.setNewUserName(userID, userName, name, bot, update)
         elif update.message.text.startswith("Please notify my every"):
             split = location = update.message.text.split("Please notify my every ")
             if len(split) != 2:
-                bot.sendMessage(chat_id=update.message.chat_id,
-                                text="Sorry " + userName + ", I don't know when to notify you!")
+                text="Sorry " + userName + ", I don't know when to notify you!"
+                self._mediator.reactorToResponder(text, update.message.chat_id)
             else:
                 params = split[1]
                 params = params.split(" ")
@@ -144,8 +158,8 @@ class Feinstrubbot:
 
                     self.setAlarmInterval(userID, params[0], bot, update)
                 else:
-                    bot.sendMessage(chat_id=update.message.chat_id,
-                                    text=userName + " please provide a valid time interval. Like '5 min' or '2 hours'. Please keep in mind, that we also the number 1 (1 hour ~ every hour)")
+                    text = userName + " please provide a valid time interval. Like '5 min' or '2 hours'. Please keep in mind, that we also the number 1 (1 hour ~ every hour)"
+                    self._mediator.reactorToResponder(text, update.message.chat_id)
 
         elif update.message.text.startswith("Set quiet hours"):
             split = update.message.text.split("Set quiet hours ")
@@ -154,41 +168,50 @@ class Feinstrubbot:
                 start = params[1]
                 end = params[3]
                 self.updateQuietHours(userID, start, end)
-                bot.sendMessage(chat_id=update.message.chat_id,
-                                text="Okay " + userName + "! Now I keep calm between " + start + " and " + end + "!")
+                text="Okay " + userName + "! Now I keep calm between " + start + " and " + end + "!"
             else:
-                bot.sendMessage(chat_id=update.message.chat_id,
-                                text=userName + " please provide a message in this form: 'Set quiet hours from $start$ to $end$'. $start$/$end$ = 10:00 in 24h-format!")
+                text=userName + " please provide a message in this form: 'Set quiet hours from $start$ to $end$'. $start$/$end$ = 10:00 in 24h-format!"
+
+            self._mediator.reactorToResponder(text, update.message.chat_id)
         elif update.message.text.startswith("debug"):
             user = self.users.find_one({"userID": update.message.from_user.id})
             print(user["locations"])
         elif update.message.text == "What is the alarm status?":
             if self.getAlarmStatus() == 1:
-                bot.sendMessage(chat_id=update.message.chat_id, text="It is Feinstaubalarm in Stuttgart")
+                text="It is Feinstaubalarm in Stuttgart"
             else:
-                bot.sendMessage(chat_id=update.message.chat_id, text="It is no Feinstaubalarm in Stuttgart")
+                text="It is no Feinstaubalarm in Stuttgart"
+            self._mediator.reactorToResponder(text, update.message.chat_id)
+
         else:
-            bot.sendMessage(chat_id=update.message.chat_id, text="Hi " + userName + ", what did you mean?!")
-            bot.sendMessage(chat_id=update.message.chat_id, text="List of Commands:")
-            bot.sendMessage(chat_id=update.message.chat_id, text="Please call me $name$ - Setup your nickname")
-            bot.sendMessage(chat_id=update.message.chat_id,
-                            text="Remove from my locations: $locationName$ - Removes location")
-            bot.sendMessage(chat_id=update.message.chat_id, text="Add to my locations: $locationName$ - Add location")
-            bot.sendMessage(chat_id=update.message.chat_id,
-                            text="My current location is $locationName$ - Set default your location")
-            bot.sendMessage(chat_id=update.message.chat_id,
-                            text="How is the air quality in $locationName$ - Returns air-quality from location")
-            bot.sendMessage(chat_id=update.message.chat_id,
-                            text="How is the air quality? - Returns air-quality from default location")
-            bot.sendMessage(chat_id=update.message.chat_id,
-                            text="What are my locations stats? - Returns your locations")
+            text="Hi " + userName + ", what did you mean?!"
+            self._mediator.reactorToResponder(text, update.message.chat_id)
+            text="List of Commands:"
+            self._mediator.reactorToResponder(text, update.message.chat_id)
+            text="Please call me $name$ - Setup your nickname"
+            self._mediator.reactorToResponder(text, update.message.chat_id)
+            text="Remove from my locations: $locationName$ - Removes location"
+            self._mediator.reactorToResponder(text, update.message.chat_id)
+            text="Add to my locations: $locationName$ - Add location"
+            self._mediator.reactorToResponder(text, update.message.chat_id)
+            text="My current location is $locationName$ - Set default your location"
+            self._mediator.reactorToResponder(text, update.message.chat_id)
+            text="How is the air quality in $locationName$ - Returns air-quality from location"
+            self._mediator.reactorToResponder(text, update.message.chat_id)
+            text="How is the air quality? - Returns air-quality from default location"
+            self._mediator.reactorToResponder(text, update.message.chat_id)
+            text="What are my locations stats? - Returns your locations"
+            self._mediator.reactorToResponder(text, update.message.chat_id)
 
     #
     # Helper Functions
     #
     def isfloat(value):
-        helper = FeinstrubHelper()
-        return helper.is_Float(value)
+        try:
+            float(value)
+            return True
+        except:
+            return False
 
     def unknown(self, bot, update):
         bot.sendMessage(chat_id=update.message.chat_id, text="Sorry, I didn't understand that command.")
@@ -199,7 +222,7 @@ class Feinstrubbot:
     def setNewLocation(self, userID, userName, location, bot, update):
         geoResult = self.gmaps.geocode(location)
         if not geoResult:
-            bot.sendMessage(chat_id=update.message.chat_id, text="Can't find location")
+            self._mediator.reactorToResponder( "Can't find location", update.message.chat_id)
         else:
             if self.userExists(userID):
                 longitude = float(geoResult[0]['geometry']['location']['lng'])
@@ -208,16 +231,14 @@ class Feinstrubbot:
                 currentSensor = self.findNextSensorValues(longitude, latitude)
                 currentDustValue = currentSensor['sensordatavalues'][0]['value']
                 resultText = "Thank you for your location update, " + userName + " \n The current dust pollution at your new location (" + location + ") is: " + currentDustValue + "µg/m³"
-
-                bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+                self._mediator.reactorToResponder( resultText, update.message.chat_id)
             else:
-                bot.sendMessage(chat_id=update.message.chat_id,
-                                text="Sorry you are not registered. Please register first.")
+                self._mediator.reactorToResponder( "Sorry you are not registered. Please register first.", update.message.chat_id)
 
     def addNewLocation(self, userID, userName, location, bot, update):
-        geoResult = self.gmaps.geocode(location)
+        geoResult = self._mediator.gmaps.geocode(location)
         if not geoResult:
-            bot.sendMessage(chat_id=update.message.chat_id, text="Can't find location")
+                self._mediator.reactorToResponder( "Can't find location", update.message.chat_id)
         else:
             if self.userExists(userID):
                 longitude = float(geoResult[0]['geometry']['location']['lng'])
@@ -227,10 +248,9 @@ class Feinstrubbot:
                 currentDustValue = currentSensor['sensordatavalues'][0]['value']
                 resultText = "Thank you for your location update, " + userName + " \n The current dust pollution at " + location + " is: " + currentDustValue + "µg/m³"
 
-                bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+                self._mediator.reactorToResponder( resultText, update.message.chat_id)
             else:
-                bot.sendMessage(chat_id=update.message.chat_id,
-                                text="Sorry you are not registered. Please register first.")
+                self._mediator.reactorToResponder( "Sorry you are not registered. Please register first.", update.message.chat_id)
 
     def updateLocation(self, userID, userName, location, longitude, latitude):
 
@@ -264,31 +284,28 @@ class Feinstrubbot:
 
         if not found:
             print(locationName + " not registered for user: " + userID)
-            bot.sendMessage(chat_id=update.message.chat_id,
-                            text=locationName + " was not registered for you, " + user["userName"] + "!")
+            self._mediator.reactorToResponder( locationName + " was not registered for you, " + user["userName"] + "!", update.message.chat_id)
         else:
             user["location"].pop(found)
 
         self.users.update({"userID": userID}, user)
-        bot.sendMessage(chat_id=update.message.chat_id, text=locationName + " removed!")
-        bot.sendMessage(chat_id=update.message.chat_id,
-                        text=user["userName"] + " your current available locations are now")
+        self._mediator.reactorToResponder( locationName + " removed!", update.message.chat_id)
+        self._mediator.reactorToResponder( user["userName"] + " your current available locations are now", update.message.chat_id)
+
         index = 0
         for location in user["locations"]:
             index += 1
-            bot.sendMessage(chat_id=update.message.chat_id, text=str(index) + ". " + location["name"])
+            self._mediator.reactorToResponder( str(index) + ". " + location["name"], update.message.chat_id)
 
     def getAllLocations(self, userID, bot, update):
         user = self.users.find_one({"userID": userID})
-        bot.sendMessage(chat_id=update.message.chat_id,
-                        text=user["userName"] + " your current available locations are:")
+        self._mediator.reactorToResponder( user["userName"] + " your current available locations are:", update.message.chat_id)
         index = 0
         for location in user["locations"]:
             index += 1
             currentSensor = self.findNextSensorValues(location["longitude"], location["latitude"])
             currentDustValue = currentSensor['sensordatavalues'][0]['value']
-            bot.sendMessage(chat_id=update.message.chat_id,
-                            text=str(index) + ". " + location["name"] + " = " + currentDustValue + " µg/m³")
+            self._mediator.reactorToResponder( str(index) + ". " + location["name"] + " = " + currentDustValue + " µg/m³", update.message.chat_id)
 
     def userHasLocation(self, locations, locationName):
         found = False
@@ -333,19 +350,18 @@ class Feinstrubbot:
             self.updateUser(userID, newName)
             resultText = "Ok, now I'm gonna call you " + newName
 
-            bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+            self._mediator.reactorToResponder( resultText, update.message.chat_id)
         else:
-            bot.sendMessage(chat_id=update.message.chat_id, text="Sorry you are not registered. Please register first.")
+            self._mediator.reactorToResponder( "Sorry you are not registered. Please register first.", update.message.chat_id)
 
     def setAlarmInterval(self, userID, interval, bot, update):
         if self.userExists(userID):
             user = self.users.find({"userID": userID})
             user["alarmInterval"] = interval
             self.users.update({"userID": userID}, user)
-            bot.sendMessage(chat_id=update.message.chat_id,
-                            text="Now I'm gonna keep you every " + interval + " min uptodate!")
+            self._mediator.reactorToResponder( "Now I'm gonna keep you every " + interval + " min uptodate!", update.message.chat_id)
         else:
-            bot.sendMessage(chat_id=update.message.chat_id, text="Sorry you are not registered. Please register first.")
+            self._mediator.reactorToResponder( "Sorry you are not registered. Please register first.", update.message.chat_id)
 
     def updateQuietHours(self, userID, start, end):
         user = self.users.find_one({"userID": userID})
@@ -366,23 +382,26 @@ class Feinstrubbot:
 
     def unregister(self, bot, update):
         userID = update.message.from_user.id
+        text = ""
         print(userID)
         if self.userExists(userID):
             if self.deleteUser(userID):
-                bot.sendMessage(chat_id=update.message.chat_id, text="You are now unregistered")
+                text="You are now unregistered"
             else:
-                bot.sendMessage(chat_id=update.message.chat_id, text="Failed to unregister you from service")
+                text="Failed to unregister you from service"
         else:
-            bot.sendMessage(chat_id=update.message.chat_id, text="You are not registered")
+            text="You are not registered"
+
+        self._mediator.reactorToResponder( text, userID)
 
     def registration(self, bot, update):
         userID = update.message.from_user.id
         if self.userExists(userID):
-            bot.sendMessage(chat_id=update.message.chat_id, text="User already registrated")
+            self._mediator.reactorToResponder( "User already registrated", update.message.chat_id)
         else:
             userName = update.message.from_user.first_name
             location = update.message.text.split(' ', 1)[-1]
-            geoResult = self.gmaps.geocode(location)
+            geoResult = self._mediator.gmaps.geocode(location)
             longitude = float(geoResult[0]['geometry']['location']['lng'])
             latitude = float(geoResult[0]['geometry']['location']['lat'])
 
@@ -415,7 +434,7 @@ class Feinstrubbot:
 
             resultText = "Hi " + userName + "! Thank you for your registration \n The current dust pollution at your location is: " + currentDustValue + "µg/m³"
 
-            bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+            self._mediator.reactorToResponder( resultText, update.message.chat_id)
 
     def updateUser(self, userID, newName):
         user = self.users.find_one({"userID": userID})
@@ -457,9 +476,8 @@ class Feinstrubbot:
                         nowMin = int(currHour) * 60 + int(currMin)
                         if not self.time_in_range(start, end, now):
                             if (nowMin % user["alarmInterval"]) == 0:
-                                self.bot.sendMessage(chat_id=user['chat_id'],
-                                                     text=user["userName"] + ", it is Feinstaubalarm in Stuttgart")
-                                self.bot.sendMessage(chat_id=user['chat_id'], text="The VVS tickets are cheaper now!")
+                                self._mediator.reactorToResponder(self._mediator.bot, user["userName"] + ", it is Feinstaubalarm in Stuttgart", user["userID"])
+                                self._mediator.reactorToResponder(self._mediator.bot, "The VVS tickets are cheaper now!", user["userID"])
             self.alarm = 1
         else:
             print("Currently no Feinstaubalarm in Stuttgart")
@@ -477,8 +495,7 @@ class Feinstrubbot:
                     nowMin = int(currHour) * 60 + int(currMin)
                     if not self.time_in_range(start, end, now):
                         if (nowMin % user["alarmInterval"]) == 0:
-                            self.bot.sendMessage(chat_id=user['chat_id'],
-                                                 text=user["userName"] + ", it is NO Feinstaubalarm in Stuttgart")
+                            self._mediator.reactorToResponder(self._mediator.bot, user["userName"] + ", it is NO Feinstaubalarm in Stuttgart", user["userID"])
 
             self.alarm = 0
         return self.alarm
@@ -524,7 +541,7 @@ class Feinstrubbot:
 
     def getAirQuality(self, userID, userName, bot, update):
         if not self.userExists(userID):
-            bot.sendMessage(chat_id=update.message.chat_id, text="You are not registrated to this service")
+            self._mediator.reactorToResponder( "You are not registrated to this service", update.message.chat_id)
         else:
             userLocation = self.getUserLocation(userID)
             longitude = userLocation[0]
@@ -533,11 +550,11 @@ class Feinstrubbot:
             currentDustValue = currentSensor['sensordatavalues'][0]['value']
             resultText = "The current dust pollution at your location is: " + currentDustValue + "µg/m³"
 
-            bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+            self._mediator.reactorToResponder( resultText, update.message.chat_id)
 
     def getAirQualityFrom(self, userID, userName, location, bot, update):
         if not self.userExists(userID):
-            bot.sendMessage(chat_id=update.message.chat_id, text="You are not registrated to this service")
+            self._mediator.reactorToResponder( "You are not registrated to this service", update.message.chat_id)
         else:
             userLocation = self.getUserLocationFrom(userID, location)
             longitude = userLocation[0]
@@ -546,26 +563,34 @@ class Feinstrubbot:
             currentDustValue = currentSensor['sensordatavalues'][0]['value']
             resultText = "The current dust pollution in " + location + " is: " + currentDustValue + "µg/m³"
 
-            bot.sendMessage(chat_id=update.message.chat_id, text=resultText)
+            self._mediator.reactorToResponder( resultText, update.message.chat_id)
 
             #
             # Merge
             #
 
 
-def alarmstatus(self, bot, update):
-    if update.message.text == "What is the alarm status?":
-        if self.check4FeinstaubAlarm() == 1:
-            bot.sendMessage(chat_id=update.message.chat_id, text="It is Feinstaubalarm in Stuttgart")
-        else:
-            bot.sendMessage(chat_id=update.message.chat_id, text="It is no Feinstaubalarm in Stuttgart")
+    def alarmstatus(self, bot, update):
+        if update.message.text == "What is the alarm status?":
+            resultText = ""
+            if self.check4FeinstaubAlarm() == 1:
+                resultText="It is Feinstaubalarm in Stuttgart"
+            else:
+                resultText="It is no Feinstaubalarm in Stuttgart"
+
+            self._mediator.reactorToResponder( resultText, update.message.chat_id)
+
+    def __init__(self, mediator, users, scheduler=BackgroundScheduler(), client=MongoClient('database', 27017) ):
+        self._mediator = mediator
+        self.scheduler = scheduler
+        self.client = client
+        self.users = users
+        scheduler.add_job(self.check4FeinstaubAlarm, 'interval', minutes=1)
+        scheduler.start()
 
 
 def main():
-    feinstrubbot = Feinstrubbot()
-    feinstrubbot.connectoToGoogle()
-    feinstrubbot.connectToDB()
-    feinstrubbot.connectToBot()
+    mediator = Mediator()
 
 
 if __name__ == '__main__':
